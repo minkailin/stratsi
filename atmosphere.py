@@ -109,8 +109,8 @@ problem.parameters['vdust0']      = vdust_analytic(zmin)
 
 problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
 problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon + ln_rhog)*sqrt(chi)/(st0*rhog0) - z")
-problem.add_equation("dz(chi) = -2.0*z + 2.0*exp(ln_rhog)*sqrt(chi)/(st0*rhog0)")
-#problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/(st0)")
+#problem.add_equation("dz(chi) = -2.0*z + 2.0*exp(ln_rhog)*sqrt(chi)/(st0*rhog0)")
+problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/(st0)")
 
 problem.add_bc("left(ln_epsilon)   = ln_epsilon0")
 problem.add_bc("left(ln_rhog)      = ln_rhog0")
