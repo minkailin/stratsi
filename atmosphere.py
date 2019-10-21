@@ -48,7 +48,7 @@ beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 grid parameters
 '''
 zmin     = 0.0
-zmax     = 0.5
+zmax     = 2.0
 nz       = 256
 
 '''
@@ -81,8 +81,8 @@ def vdust_analytic(z):
     return -beta*z
 
 def visc(z):
-    #return 1.0e-6
-    return alpha0*rhog0/rhog_analytic(z) #this is needed because we assume the dynamical viscosity = nu*rhog = constant throughout 
+    return 0.0
+    #return alpha0*rhog0/rhog_analytic(z) #this is needed because we assume the dynamical viscosity = nu*rhog = constant throughout 
 
 def eta_hat(z):
     return eta_hat0
@@ -105,7 +105,10 @@ setup grid and problem
 z_basis = de.Chebyshev('z', nz, interval=(zmin,zmax), dealias=2)
 
 domain  = de.Domain([z_basis], np.float64, comm=MPI.COMM_SELF)
-problem = de.LBVP(domain, variables=['vgx', 'vgx_prime', 'vgy', 'vgy_prime', 'vdx', 'vdy'], ncc_cutoff=ncc_cutoff)
+
+#problem = de.LBVP(domain, variables=['vgx', 'vgx_prime', 'vgy', 'vgy_prime', 'vdx', 'vdy'], ncc_cutoff=ncc_cutoff)
+problem = de.LBVP(domain, variables=['vgx', 'vgy', 'vdx', 'vdy'], ncc_cutoff=ncc_cutoff)
+#problem = de.NLBVP(domain, variables=['vgx', 'vgx_prime', 'vgy', 'vgy_prime', 'vdx', 'vdy'], ncc_cutoff=ncc_cutoff)
 
 '''
 non-constant coefficients:
@@ -140,25 +143,29 @@ problem.parameters['vdy0']  = vdy0
 '''
 equilibrium equations 
 '''
-
+'''
+full equations
+'''
+'''
 problem.add_equation("visc_profile*dz(vgx_prime) + 2*vgy - eps_profile*(vgx - vdx)/st0 = -2*eta_profile")
 problem.add_equation("dz(vgx) - vgx_prime = 0")
 problem.add_equation("visc_profile*dz(vgy_prime) - 0.5*vgx - eps_profile*(vgy - vdy)/st0 = 0")
 problem.add_equation("dz(vgy) - vgy_prime = 0")
 problem.add_equation("vzd_profile*dz(vdx) - 2*vdy + (vdx - vgx)/st0 = 0")
 problem.add_equation("vzd_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/st0 = 0")
-
-#problem.add_equation("visc_profile*dz(vgx_prime)*st0 + 2*vgy*st0 - eps_profile*(vgx - vdx) = -2*eta_profile*st0")
-#problem.add_equation("dz(vgx) - vgx_prime = 0")
-#problem.add_equation("visc_profile*dz(vgy_prime)*st0 - 0.5*vgx*st0 - eps_profile*(vgy - vdy) = 0")
-#problem.add_equation("dz(vgy) - vgy_prime = 0")
-#problem.add_equation("vzd_profile*dz(vdx)*st0 - 2*vdy*st0 + (vdx - vgx) = 0")
-#problem.add_equation("vzd_profile*dz(vdy)*st0 + 0.5*vdx*st0 + (vdy - vgy) = 0")
+'''
+'''
+equations without gas viscosity
+'''
+problem.add_equation("2*vgy - eps_profile*(vgx - vdx)/st0 = -2*eta_profile")
+problem.add_equation("-0.5*vgx - eps_profile*(vgy - vdy)/st0 = 0")
+problem.add_equation("vzd_profile*dz(vdx) - 2*vdy + (vdx - vgx)/st0 = 0")
+problem.add_equation("vzd_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/st0 = 0")
 
 '''
-initial conditions 
+boundary conditions for full problem
 '''
-#problem.meta[:]['z']['dirichlet'] = True
+'''
 problem.add_bc("left(vgx)            = vgx0")
 #problem.add_bc("right(vgx)            = 0")
 problem.add_bc("left(vgx_prime)      = 0")
@@ -167,12 +174,61 @@ problem.add_bc("left(vgy)            = vgy0")
 problem.add_bc("left(vgy_prime)      = 0")
 problem.add_bc("left(vdx)            = vdx0")
 problem.add_bc("left(vdy)            = vdy0")
+'''
 
 '''
-solve equations 
+boundary conditions for inviscid case
+'''
+problem.add_bc("left(vdx)            = vdx0")
+problem.add_bc("left(vdy)            = vdy0")
+
+'''
+build problem and solver
 '''
 solver = problem.build_solver()
+
+'''
+initial guess for solving as nonlinear problem
+set as unstratified solution but use epsilon(z) and eta_hat(z)
+'''
+'''
+z    = domain.grid(0, scales=domain.dealias)
+vgx  = solver.state['vgx']
+vgy  = solver.state['vgy']
+vdx  = solver.state['vdx']
+vdy  = solver.state['vdy']
+
+vgx.set_scales(domain.dealias)
+vgy.set_scales(domain.dealias)
+vdx.set_scales(domain.dealias)
+vdy.set_scales(domain.dealias)
+
+Delta2_var = st0*st0 + (1.0 + epsilon_analytic(z))**2
+vgx['g'] = -2.0*eta_hat(z)*st0/Delta2_var
+vdy['g'] = -(1.0+epsilon_analytic(z))*eta_hat(z)/Delta2_var
+vgx['g'] = 2.0*eta_hat(z)*epsilon_analytic(z)*st0/Delta2_var
+vgy['g'] = -(1.0 + epsilon_analytic(z) + st0*st0)*eta_hat(z)/Delta2_var
+'''
+
+'''
+solve equations (linear problem)
+'''
 solver.solve()
+
+'''
+solve as nonlinear problem
+'''
+'''
+pert = solver.perturbations.data
+pert.fill(1+tolerance)
+
+iter = 0
+start_time = time.time()
+while np.sum(np.abs(pert)) > tolerance and np.sum(np.abs(pert)) < 1e6:
+    solver.newton_iteration()
+    iter += 1
+end_time = time.time()
+'''
 
 '''
 extract solutions (to fine grid)
@@ -233,7 +289,7 @@ legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, font
 #plt.title(title,weight='bold')
 
 plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel('$z/H_g$',fontsize=fontsize)
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
 plt.ylabel(r'$velocities$', fontsize=fontsize)

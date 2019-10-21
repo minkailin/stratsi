@@ -37,9 +37,9 @@ beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 '''
 grid parameters
 '''
-zmin     = 0.0
-zmax     = 2.0
-nz       = 256
+zmin     = 1e-2
+zmax     = 1.5
+nz       = 512
 
 '''
 numerical parameters
@@ -72,7 +72,15 @@ def vdust_analytic(z):
 
 z_basis = de.Chebyshev('z', nz, interval=(zmin,zmax), dealias=2)
 domain = de.Domain([z_basis], np.float64, comm=MPI.COMM_SELF)
-problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'chi'], ncc_cutoff=ncc_cutoff)
+'''
+for chi=vdz^2 formulation
+'''
+#problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'chi'], ncc_cutoff=ncc_cutoff)
+
+'''
+for vdz formulation
+'''
+problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'vdz'], ncc_cutoff=ncc_cutoff)
 
 problem.parameters['rhog0']      = rhog0
 problem.parameters['st0']        = st0
@@ -83,15 +91,44 @@ problem.parameters['ln_rhog0']    = np.log(rhog_analytic(zmin))
 problem.parameters['vdust0']      = vdust_analytic(zmin)
 
 
-problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
-#problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon + ln_rhog)*sqrt(chi)/(st0*rhog0) - z") #for stokes ~1/rhog
-#problem.add_equation("dz(chi) = -2.0*z + 2.0*exp(ln_rhog)*sqrt(chi)/(st0*rhog0)")          #for stoeks ~1/rhog
-problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon)*sqrt(chi)/st0 - z")
-problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/st0")
+'''
+for stokes ~1/rhog, and using "vdz" formulation
+'''
+problem.add_equation("dz(ln_epsilon) = vdz/delta0")
+problem.add_equation("dz(ln_rhog) = exp(ln_epsilon + ln_rhog)*vdz/(st0*rhog0) - z") 
+problem.add_equation("dz(vdz) = -z/vdz - exp(ln_rhog)/(st0*rhog0)")        
+
+'''
+for stokes ~1/rhog, and using "chi=vdz^2" formulation
+'''
+#problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
+#problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon + ln_rhog)*sqrt(chi)/(st0*rhog0) - z") 
+#problem.add_equation("dz(chi) = -2.0*z + 2.0*exp(ln_rhog)*sqrt(chi)/(st0*rhog0)")          
+
+'''
+for constant stokes number, and using "vdz" formulation
+'''
+#problem.add_equation("dz(ln_epsilon) = vdz/delta0")
+#problem.add_equation("dz(ln_rhog) = exp(ln_epsilon)*vdz/st0 - z") 
+#problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0")  
+
+'''
+for constant stokes number, and using "chi=vdz^2" formulation
+'''
+#problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
+#problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon)*sqrt(chi)/st0 - z")
+#problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/st0")
 
 problem.add_bc("left(ln_epsilon)   = ln_epsilon0")
 problem.add_bc("left(ln_rhog)      = ln_rhog0")
-problem.add_bc("left(chi)          = vdust0*vdust0")
+'''
+for vdz formulation 
+'''
+problem.add_bc("left(vdz)          = vdust0")
+'''
+for chi=vdz^2 formulation 
+'''
+#problem.add_bc("left(chi)          = vdust0*vdust0")
 
 solver = problem.build_solver()
 
@@ -99,11 +136,19 @@ solver = problem.build_solver()
 z            = domain.grid(0, scales=domain.dealias)
 ln_epsilon   = solver.state['ln_epsilon']
 ln_rhog      = solver.state['ln_rhog']
-chi          = solver.state['chi']
+'''
+for vdz formulation 
+'''
+vdz          = solver.state['vdz']
+'''
+for chi=vdz^2 formulation 
+'''
+#chi          = solver.state['chi']
 
 ln_epsilon.set_scales(domain.dealias)
 ln_rhog.set_scales(domain.dealias)
-chi.set_scales(domain.dealias)
+vdz.set_scales(domain.dealias)
+#chi.set_scales(domain.dealias)
 
 epsilon_guess = epsilon_analytic(z)
 rhog_guess    = rhog_analytic(z)   
@@ -111,7 +156,8 @@ vdust_guess   = vdust_analytic(z)
 
 ln_epsilon['g'] = np.log(epsilon_guess)
 ln_rhog['g']    = np.log(rhog_guess)
-chi['g']        = vdust_guess**2
+vdz['g']        = vdust_guess
+#chi['g']        = vdust_guess**2
 
 
 # Iterations
@@ -174,7 +220,8 @@ if do_plot:
 #    plt.ylim(ymin,ymax)
 #    plt.xlim(xmin,xmax)
 
-    vdust = -np.sqrt(chi['g'])
+#    vdust = -np.sqrt(chi['g'])
+    vdust = vdz['g']
     plt.plot(z, vdust*1e3,linewidth=2, label='numerical solution')
     plt.plot(z, vdust_guess*1e3,linewidth=2,linestyle='dashed', label='initial guess')
             
