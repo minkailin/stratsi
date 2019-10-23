@@ -10,7 +10,7 @@ horizontal velocity ODEs for vgx (2nd order), vgy (2nd order), vdx, vdy
 assume at z=0 we recover the well-known unstratified solutions 
 
 """
-
+import sys
 import numpy as np
 from mpi4py import MPI
 import matplotlib.pyplot as plt
@@ -28,28 +28,32 @@ matplotlib_logger.setLevel(logging.WARNING)
 comm = MPI.COMM_WORLD
 
 '''
-physical parameters
+read in parameters from 'eqm_vert.py'
 '''
-rhog0    = 1.0   #midplane gas density, density normalization 
-eta_hat0 = 0.05  #midplane radial pressure gradient 
-alpha0   = 1e-3  #midplane alpha viscosity value
-epsilon0 = 1.0   #midplane d/g ratio
-st0      = 1e-3  #assume a constant stokes number throughout 
- 
-'''
-assume a constant diffusion coefficient throughout. 
-slight inconsistency here because gas visc depends on height, but not particle diffusion (for simplicity)
-'''
-delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
+output_file = h5py.File('./eqm_vert.h5', 'r')
+rhog0    = output_file['rhog0'][()]
+alpha0   = output_file['alpha0'][()]
+epsilon0 = output_file['epsilon0'][()]
+st0      = output_file['st0'][()]
+eta_hat0 = output_file['eta_hat0'][()]
+delta0   = output_file['delta0'][()] 
+beta     = output_file['beta'][()]
+zmin     = output_file['zmin'][()]
+zmax     = output_file['zmax'][()]
+nz_data  = output_file['nz'][()]
+
+zaxis    = output_file['z'][:]
+epsilon  = output_file['epsilon'][:]
+rhog     = output_file['rhog'][:]
+vdz      = output_file['vdz'][:]
+output_file.close()
+
 Delta2   = st0*st0 + (1.0 + epsilon0)**2 
-beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
-    
+
 '''
-grid parameters
+parameters for this calculation
 '''
-zmin     = 0.0
-zmax     = 2.0
-nz       = 256
+nz = 32#nz_data 
 
 '''
 numerical parameters
@@ -80,15 +84,20 @@ def rhog_analytic_dustfree(z):
 def vdust_analytic(z):
     return -beta*z
 
-def visc(z):
-    return 0.0
-    #return alpha0*rhog0/rhog_analytic(z) #this is needed because we assume the dynamical viscosity = nu*rhog = constant throughout 
+'''
+assume a constant diffusion coefficient throughout. 
+slight inconsistency here because gas visc depends on height, but not particle diffusion (for simplicity)
+'''
+
+def visc(rhog_profile):
+    #return 0.0
+    return alpha0*rhog0/rhog_profile['g'] #this is needed because we assume the dynamical viscosity = nu*rhog = constant throughout 
 
 def eta_hat(z):
     return eta_hat0
 
 '''
-specify vdx, vdy, vgx, vgy at the midplane to be that for the unstratified disk 
+vdx, vdy, vgx, vgy at the midplane of an unstratified disk 
 '''
 
 vdx0 = -2.0*eta_hat0*st0/Delta2
@@ -98,12 +107,10 @@ vgy0 = -(1.0 + epsilon0 + st0*st0)*eta_hat0/Delta2
 
 print('vgx, vgy, vdx, vdy', vgx0, vgy0, vdx0, vdy0)
 
-
 '''
 setup grid and problem 
 '''
 z_basis = de.Chebyshev('z', nz, interval=(zmin,zmax), dealias=2)
-
 domain  = de.Domain([z_basis], np.float64, comm=MPI.COMM_SELF)
 
 #problem = de.LBVP(domain, variables=['vgx', 'vgx_prime', 'vgy', 'vgy_prime', 'vdx', 'vdy'], ncc_cutoff=ncc_cutoff)
@@ -112,24 +119,41 @@ problem = de.LBVP(domain, variables=['vgx', 'vgy', 'vdx', 'vdy'], ncc_cutoff=ncc
 
 '''
 non-constant coefficients:
-equilibrium d/g ratio, dust vert velocity, radial pressure gradient, viscosity  
+equilibrium d/g ratio and dust vert velocity are extracted from data 
+radial pressure gradient, viscosity are prescribed 
 '''
-z                = domain.grid(0)
-
 eps_profile      = domain.new_field(name='eps_profile')
-eps_profile['g'] = epsilon_analytic(z)
-
-vzd_profile      = domain.new_field(name='vzd_profile')
-vzd_profile['g'] = vdust_analytic(z)
-
+rhog_profile     = domain.new_field(name='rhog_profile')
+vdz_profile      = domain.new_field(name='vdz_profile')
 eta_profile      = domain.new_field(name='eta_profile')
-eta_profile['g'] = eta_hat(z)
-
 visc_profile     = domain.new_field(name='visc_profile')
-visc_profile['g']= visc(z)
+
+scale            = nz_data/nz 
+
+eps_profile.set_scales(scale)
+rhog_profile.set_scales(scale)
+vdz_profile.set_scales(scale)
+
+eps_profile['g'] = epsilon
+rhog_profile['g']= rhog 
+vdz_profile['g'] = vdz
+
+eps_profile.set_scales(1,keep_data=True)
+rhog_profile.set_scales(1,keep_data=True)
+vdz_profile.set_scales(1,keep_data=True)
+
+z                = domain.grid(0)
+#eps_profile['g'] = epsilon_analytic(z)
+#rhog_profile['g']= rhog_analytic(z)
+#vdz_profile['g'] = vdust_analytic(z)
+eta_profile['g'] = eta_hat(z)
+visc_profile['g']= visc(rhog_profile)
+
+#print(eps_profile['g'])
+#sys.exit()
 
 problem.parameters['eps_profile'] = eps_profile
-problem.parameters['vzd_profile'] = vzd_profile
+problem.parameters['vdz_profile'] = vdz_profile
 problem.parameters['eta_profile'] = eta_profile
 problem.parameters['visc_profile']= visc_profile
 
@@ -151,16 +175,16 @@ problem.add_equation("visc_profile*dz(vgx_prime) + 2*vgy - eps_profile*(vgx - vd
 problem.add_equation("dz(vgx) - vgx_prime = 0")
 problem.add_equation("visc_profile*dz(vgy_prime) - 0.5*vgx - eps_profile*(vgy - vdy)/st0 = 0")
 problem.add_equation("dz(vgy) - vgy_prime = 0")
-problem.add_equation("vzd_profile*dz(vdx) - 2*vdy + (vdx - vgx)/st0 = 0")
-problem.add_equation("vzd_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/st0 = 0")
+problem.add_equation("vdz_profile*dz(vdx) - 2*vdy + (vdx - vgx)/st0 = 0")
+problem.add_equation("vdz_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/st0 = 0")
 '''
 '''
 equations without gas viscosity
 '''
 problem.add_equation("2*vgy - eps_profile*(vgx - vdx)/st0 = -2*eta_profile")
 problem.add_equation("-0.5*vgx - eps_profile*(vgy - vdy)/st0 = 0")
-problem.add_equation("vzd_profile*dz(vdx) - 2*vdy + (vdx - vgx)/st0 = 0")
-problem.add_equation("vzd_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/st0 = 0")
+problem.add_equation("vdz_profile*dz(vdx) - 2*vdy + (vdx - vgx)/st0 = 0")
+problem.add_equation("vdz_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/st0 = 0")
 
 '''
 boundary conditions for full problem
@@ -234,6 +258,8 @@ end_time = time.time()
 extract solutions (to fine grid)
 '''
 
+
+
 z    = domain.grid(0, scales=domain.dealias)
 vgx  = solver.state['vgx']
 vgy  = solver.state['vgy']
@@ -297,9 +323,12 @@ plt.ylabel(r'$velocities$', fontsize=fontsize)
 fname = 'eqm_velocity'
 plt.savefig(fname,dpi=150)
 
-dvdx = domain.new_field()
-vdx.differentiate('z',out=dvdx)
-print(dvdx.interpolate(z=0)['g'][0])
-                    
+
+#dvdx = domain.new_field()
+#vdx.differentiate('z',out=dvdx)
+#print(dvdx.interpolate(z=zmin)['g'][0])
+
+
+
 #plt.show()
 

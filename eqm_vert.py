@@ -26,7 +26,8 @@ rhog0    = 1.0   #midplane gas density, density normalization
 alpha0   = 1e-3  #midplane alpha viscosity value
 epsilon0 = 1.0   #midplane d/g ratio
 st0      = 1e-3  #assume a constant stokes number throughout 
- 
+eta_hat0 = 0.05  #dimensionless radial pressure gradient, not used here but in eqm_horiz
+
 '''
 assume a constant diffusion coefficient throughout. 
 slight inconsistency here because gas visc depends on height, but not particle diffusion (for simplicity)
@@ -37,10 +38,22 @@ beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 '''
 grid parameters
 '''
-zmin     = 1e-2
-zmax     = 1.5
+zmin     = 0.0
+zmax     = 2.0
 nz       = 512
 
+output_file = h5py.File('./eqm_vert.h5','w')
+output_file['rhog0']    = rhog0
+output_file['alpha0']   = alpha0
+output_file['epsilon0'] = epsilon0
+output_file['st0']      = st0
+output_file['eta_hat0'] = eta_hat0
+output_file['delta0']   = delta0
+output_file['beta']     = beta
+output_file['zmin']     = zmin
+output_file['zmax']     = zmax
+output_file['nz']       = nz
+ 
 '''
 numerical parameters
 '''
@@ -90,13 +103,12 @@ problem.parameters['ln_epsilon0'] = np.log(epsilon_analytic(zmin))
 problem.parameters['ln_rhog0']    = np.log(rhog_analytic(zmin))
 problem.parameters['vdust0']      = vdust_analytic(zmin)
 
-
 '''
 for stokes ~1/rhog, and using "vdz" formulation
 '''
-problem.add_equation("dz(ln_epsilon) = vdz/delta0")
-problem.add_equation("dz(ln_rhog) = exp(ln_epsilon + ln_rhog)*vdz/(st0*rhog0) - z") 
-problem.add_equation("dz(vdz) = -z/vdz - exp(ln_rhog)/(st0*rhog0)")        
+#problem.add_equation("dz(ln_epsilon) = vdz/delta0")
+#problem.add_equation("dz(ln_rhog) = exp(ln_epsilon + ln_rhog)*vdz/(st0*rhog0) - z") 
+#problem.add_equation("dz(vdz) = -z/vdz - exp(ln_rhog)/(st0*rhog0)")        
 
 '''
 for stokes ~1/rhog, and using "chi=vdz^2" formulation
@@ -108,9 +120,9 @@ for stokes ~1/rhog, and using "chi=vdz^2" formulation
 '''
 for constant stokes number, and using "vdz" formulation
 '''
-#problem.add_equation("dz(ln_epsilon) = vdz/delta0")
-#problem.add_equation("dz(ln_rhog) = exp(ln_epsilon)*vdz/st0 - z") 
-#problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0")  
+problem.add_equation("dz(ln_epsilon) = vdz/delta0")
+problem.add_equation("dz(ln_rhog) = exp(ln_epsilon)*vdz/st0 - z") 
+problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0")  
 
 '''
 for constant stokes number, and using "chi=vdz^2" formulation
@@ -277,6 +289,14 @@ if do_plot:
     fname = 'eqm_rhog'
     plt.savefig(fname,dpi=150)
     
-    
 #plt.show()
 
+zaxis = domain.grid(0,scales=1)
+ln_epsilon.set_scales(1, keep_data=True)
+ln_rhog.set_scales(1, keep_data=True)
+vdz.set_scales(1, keep_data=True)
+output_file['z']       = zaxis
+output_file['epsilon'] = np.exp(ln_epsilon['g'])
+output_file['rhog']    = np.exp(ln_rhog['g'])
+output_file['vdz']     = vdz['g']
+output_file.close()
