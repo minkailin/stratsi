@@ -27,6 +27,7 @@ alpha0   = 1e-3  #midplane alpha viscosity value
 epsilon0 = 1.0   #midplane d/g ratio
 st0      = 1e-3  #assume a constant stokes number throughout 
 eta_hat0 = 0.05  #dimensionless radial pressure gradient, not used here but in eqm_horiz
+fixedSt  = True 
 
 '''
 assume a constant diffusion coefficient throughout. 
@@ -39,7 +40,7 @@ beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 grid parameters
 '''
 zmin     = 0.0
-zmax     = 2.0
+zmax     = 5.0
 nz       = 512
 
 output_file = h5py.File('./eqm_vert.h5','w')
@@ -59,6 +60,7 @@ numerical parameters
 '''
 ncc_cutoff = 1e-13
 tolerance  = 1e-8
+vdz2_form  = False
 
 '''
 plotting parameters
@@ -83,17 +85,27 @@ def rhog_analytic_dustfree(z):
 def vdust_analytic(z):
     return -beta*z
 
+def stokes(rhog):
+    if fixedSt == True:
+        return st0*rhog/rhog
+    if fixedSt == False:
+        return st0*rhog0/rhog
+    
 z_basis = de.Chebyshev('z', nz, interval=(zmin,zmax), dealias=2)
 domain = de.Domain([z_basis], np.float64, comm=MPI.COMM_SELF)
+
 '''
 for chi=vdz^2 formulation
 '''
-#problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'chi'], ncc_cutoff=ncc_cutoff)
-
+if vdz2_form == True: 
+    problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'chi'], ncc_cutoff=ncc_cutoff)
+    
 '''
 for vdz formulation
 '''
-problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'vdz'], ncc_cutoff=ncc_cutoff)
+if vdz2_form == False:
+    problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'vdz'], ncc_cutoff=ncc_cutoff)
+
 
 problem.parameters['rhog0']      = rhog0
 problem.parameters['st0']        = st0
@@ -104,43 +116,59 @@ problem.parameters['ln_rhog0']    = np.log(rhog_analytic(zmin))
 problem.parameters['vdust0']      = vdust_analytic(zmin)
 
 '''
-for stokes ~1/rhog, and using "vdz" formulation
+for stokes ~1/rhog,
 '''
-#problem.add_equation("dz(ln_epsilon) = vdz/delta0")
-#problem.add_equation("dz(ln_rhog) = exp(ln_epsilon + ln_rhog)*vdz/(st0*rhog0) - z") 
-#problem.add_equation("dz(vdz) = -z/vdz - exp(ln_rhog)/(st0*rhog0)")        
+if fixedSt == False: 
+    '''
+    using "vdz" formulation
+    '''
+    if vdz2_form == False:
+        problem.add_equation("dz(ln_epsilon) = vdz/delta0")
+        problem.add_equation("dz(ln_rhog) = exp(ln_epsilon + ln_rhog)*vdz/(st0*rhog0) - z") 
+        problem.add_equation("dz(vdz) = -z/vdz - exp(ln_rhog)/(st0*rhog0)")        
+
+    '''
+    using "chi=vdz^2" formulation
+    '''
+    if vdz2_form == True:
+        problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
+        problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon + ln_rhog)*sqrt(chi)/(st0*rhog0) - z") 
+        problem.add_equation("dz(chi) = -2.0*z + 2.0*exp(ln_rhog)*sqrt(chi)/(st0*rhog0)")          
 
 '''
-for stokes ~1/rhog, and using "chi=vdz^2" formulation
+for constant stokes number
 '''
-#problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
-#problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon + ln_rhog)*sqrt(chi)/(st0*rhog0) - z") 
-#problem.add_equation("dz(chi) = -2.0*z + 2.0*exp(ln_rhog)*sqrt(chi)/(st0*rhog0)")          
+if fixedSt == True:
+    '''
+    using "vdz" formulation
+    '''
+    if vdz2_form == False:
+        problem.add_equation("dz(ln_epsilon) = vdz/delta0")
+        problem.add_equation("dz(ln_rhog) = exp(ln_epsilon)*vdz/st0 - z") 
+        problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0")  
 
-'''
-for constant stokes number, and using "vdz" formulation
-'''
-problem.add_equation("dz(ln_epsilon) = vdz/delta0")
-problem.add_equation("dz(ln_rhog) = exp(ln_epsilon)*vdz/st0 - z") 
-problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0")  
-
-'''
-for constant stokes number, and using "chi=vdz^2" formulation
-'''
-#problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
-#problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon)*sqrt(chi)/st0 - z")
-#problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/st0")
-
+    '''
+    using "chi=vdz^2" formulation
+    '''
+    if vdz2_form == True:
+        problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
+        problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon)*sqrt(chi)/st0 - z")
+        problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/st0")
+    
 problem.add_bc("left(ln_epsilon)   = ln_epsilon0")
 problem.add_bc("left(ln_rhog)      = ln_rhog0")
+
 '''
 for vdz formulation 
 '''
-problem.add_bc("left(vdz)          = vdust0")
+if vdz2_form == False:
+    problem.add_bc("left(vdz)          = vdust0")
+
 '''
 for chi=vdz^2 formulation 
 '''
-#problem.add_bc("left(chi)          = vdust0*vdust0")
+if vdz2_form == True:
+    problem.add_bc("left(chi)          = vdust0*vdust0")
 
 solver = problem.build_solver()
 
@@ -148,28 +176,31 @@ solver = problem.build_solver()
 z            = domain.grid(0, scales=domain.dealias)
 ln_epsilon   = solver.state['ln_epsilon']
 ln_rhog      = solver.state['ln_rhog']
-'''
-for vdz formulation 
-'''
-vdz          = solver.state['vdz']
-'''
-for chi=vdz^2 formulation 
-'''
-#chi          = solver.state['chi']
 
 ln_epsilon.set_scales(domain.dealias)
 ln_rhog.set_scales(domain.dealias)
-vdz.set_scales(domain.dealias)
-#chi.set_scales(domain.dealias)
 
 epsilon_guess = epsilon_analytic(z)
 rhog_guess    = rhog_analytic(z)   
-vdust_guess   = vdust_analytic(z) 
+vdust_guess   = vdust_analytic(z)
 
 ln_epsilon['g'] = np.log(epsilon_guess)
 ln_rhog['g']    = np.log(rhog_guess)
-vdz['g']        = vdust_guess
-#chi['g']        = vdust_guess**2
+
+'''
+for vdz formulation 
+'''
+if vdz2_form == False:
+    vdz          = solver.state['vdz']
+    vdz.set_scales(domain.dealias)
+    vdz['g']        = vdust_guess
+'''
+for chi=vdz^2 formulation 
+'''
+if vdz2_form == True:
+    chi          = solver.state['chi']
+    chi.set_scales(domain.dealias)
+    chi['g']        = vdust_guess**2
 
 
 # Iterations
@@ -232,8 +263,12 @@ if do_plot:
 #    plt.ylim(ymin,ymax)
 #    plt.xlim(xmin,xmax)
 
-#    vdust = -np.sqrt(chi['g'])
+
+if vdz2_form == True:
+    vdust = -np.sqrt(chi['g'])
+if vdz2_form == False:
     vdust = vdz['g']
+    
     plt.plot(z, vdust*1e3,linewidth=2, label='numerical solution')
     plt.plot(z, vdust_guess*1e3,linewidth=2,linestyle='dashed', label='initial guess')
             
@@ -295,8 +330,16 @@ zaxis = domain.grid(0,scales=1)
 ln_epsilon.set_scales(1, keep_data=True)
 ln_rhog.set_scales(1, keep_data=True)
 vdz.set_scales(1, keep_data=True)
+
+epsilon = np.exp(ln_epsilon['g'])
+rhog    = np.exp(ln_rhog['g'])
+
 output_file['z']       = zaxis
-output_file['epsilon'] = np.exp(ln_epsilon['g'])
-output_file['rhog']    = np.exp(ln_rhog['g'])
+output_file['epsilon'] = epsilon
+output_file['rhog']    = rhog
 output_file['vdz']     = vdz['g']
+output_file['stokes']  = stokes(rhog)
+#print(rhog.interpolate(z=zmax)['g'][0])
+#print(stokes(rhog))
+#print(rhog[nz-1])
 output_file.close()

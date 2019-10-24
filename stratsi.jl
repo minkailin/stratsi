@@ -190,8 +190,8 @@ savefig("eqm_epsilon_jl",dpi=150)
 
 #initial condition for vgx, dvgx, vgy, dvgy, vdx, vdy
 init_horiz       = [vgx0, 0.0, vgy0, 0.0, vdx0, vdy0]
-#prob_horiz       = ODEProblem(deriv_horiz!, init_horiz, zaxis, sol)
-#sol_horiz   = solve(prob_horiz,radau5(),reltol=1e-8,abstol=1e-8)
+prob_horiz       = ODEProblem(deriv_horiz!, init_horiz, zaxis, sol)
+sol_horiz   = solve(prob_horiz,radau5(),reltol=1e-8,abstol=1e-8)
 
 #prob_horiz = TwoPointBVProblem(deriv_horiz!, deriv_horz_bc!, init_horiz, zaxis)
 #sol_horiz  = solve(prob_horiz, MIRK4(), dt=zmax/nz)
@@ -218,8 +218,8 @@ plt.ylim(-0.1,0.1)
 
 plt.plot(zplot, vgx, linewidth=2, label="\$v_{gx}\$")
 plt.plot(zplot, vgy, linewidth=2, label="\$v_{gy}\$")
-plt.plot(zplot, vdx, linewidth=2, label="\$v_{dx}\$")
-plt.plot(zplot, vdy, linewidth=2, label="\$v_{dy}\$")
+#plt.plot(zplot, vdx, linewidth=2, label="\$v_{dx}\$")
+#plt.plot(zplot, vdy, linewidth=2, label="\$v_{dy}\$")
 
 legend(fontsize=12,frameon=0)
 
