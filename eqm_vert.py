@@ -4,7 +4,7 @@ assume constant stokes number and diffusion throughout domain
 """
 
 import numpy as np
-from mpi4py import MPI
+#from mpi4py import MPI
 import matplotlib.pyplot as plt
 from dedalus import public as de
 import h5py
@@ -17,17 +17,17 @@ logger = logging.getLogger(__name__)
 matplotlib_logger = logging.getLogger('matplotlib')
 matplotlib_logger.setLevel(logging.WARNING)
 
-comm = MPI.COMM_WORLD
+#comm = MPI.COMM_WORLD
 
 '''
 physical parameters
 '''
 rhog0    = 1.0   #midplane gas density, density normalization 
-alpha0   = 1e-3  #midplane alpha viscosity value
+alpha0   = 1e-3  #alpha viscosity value, assumed constant
 epsilon0 = 1.0   #midplane d/g ratio
 st0      = 1e-3  #assume a constant stokes number throughout 
 eta_hat0 = 0.05  #dimensionless radial pressure gradient, not used here but in eqm_horiz
-fixedSt  = True 
+fixedSt  = True
 
 '''
 assume a constant diffusion coefficient throughout. 
@@ -91,8 +91,35 @@ def stokes(rhog):
     if fixedSt == False:
         return st0*rhog0/rhog
     
+def eta_hat(z):
+    #assume constant radial pressure gradient for now (division by z/z to convert to array for output)
+    #not actually use in ODE, needed for outputing profile
+    return eta_hat0*(z+1.0)/(z+1.0)
+
+'''
+domain setup
+'''
 z_basis = de.Chebyshev('z', nz, interval=(zmin,zmax), dealias=2)
-domain = de.Domain([z_basis], np.float64, comm=MPI.COMM_SELF)
+domain = de.Domain([z_basis], grid_dtype=np.float64)#, comm=MPI.COMM_SELF)
+
+'''
+setup stokes number function for use in dedalus solver
+'''
+'''
+def stokes_ded(*args):
+    return args[0].data**2
+def stokes_func(*args, domain=domain, F=stokes_ded):
+    return de.operators.GeneralFunction(domain, layout='g', func=F, args=args)
+de.operators.parseables['stokes_func'] = stokes_func
+'''
+'''
+def F(*args):
+    z =args[0].data
+    return np.sin(z) #st0, rhog0 = const params
+def G(*args, domain=domain, F=F):
+    return de.operators.GeneralFunction(domain, layout='g', func=F, args=args)
+de.operators.parseables['G'] = G
+'''
 
 '''
 for chi=vdz^2 formulation
@@ -105,7 +132,6 @@ for vdz formulation
 '''
 if vdz2_form == False:
     problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'vdz'], ncc_cutoff=ncc_cutoff)
-
 
 problem.parameters['rhog0']      = rhog0
 problem.parameters['st0']        = st0
@@ -126,7 +152,7 @@ if fixedSt == False:
         problem.add_equation("dz(ln_epsilon) = vdz/delta0")
         problem.add_equation("dz(ln_rhog) = exp(ln_epsilon + ln_rhog)*vdz/(st0*rhog0) - z") 
         problem.add_equation("dz(vdz) = -z/vdz - exp(ln_rhog)/(st0*rhog0)")        
-
+        
     '''
     using "chi=vdz^2" formulation
     '''
@@ -146,7 +172,8 @@ if fixedSt == True:
         problem.add_equation("dz(ln_epsilon) = vdz/delta0")
         problem.add_equation("dz(ln_rhog) = exp(ln_epsilon)*vdz/st0 - z") 
         problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0")  
-
+        #problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0 + G(z)")  
+        
     '''
     using "chi=vdz^2" formulation
     '''
@@ -154,10 +181,12 @@ if fixedSt == True:
         problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
         problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon)*sqrt(chi)/st0 - z")
         problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/st0")
-    
+
+'''
+boundary conditions
+'''     
 problem.add_bc("left(ln_epsilon)   = ln_epsilon0")
 problem.add_bc("left(ln_rhog)      = ln_rhog0")
-
 '''
 for vdz formulation 
 '''
@@ -331,15 +360,12 @@ ln_epsilon.set_scales(1, keep_data=True)
 ln_rhog.set_scales(1, keep_data=True)
 vdz.set_scales(1, keep_data=True)
 
-epsilon = np.exp(ln_epsilon['g'])
-rhog    = np.exp(ln_rhog['g'])
-
 output_file['z']       = zaxis
-output_file['epsilon'] = epsilon
-output_file['rhog']    = rhog
+output_file['ln_epsilon'] = ln_epsilon['g']
+output_file['ln_rhog']    = ln_rhog['g']
 output_file['vdz']     = vdz['g']
+rhog = np.exp(ln_rhog['g'])
 output_file['stokes']  = stokes(rhog)
-#print(rhog.interpolate(z=zmax)['g'][0])
-#print(stokes(rhog))
-#print(rhog[nz-1])
+output_file['eta']     = eta_hat(zaxis)
+
 output_file.close()
