@@ -54,6 +54,7 @@ output_file['beta']     = beta
 output_file['zmin']     = zmin
 output_file['zmax']     = zmax
 output_file['nz']       = nz
+output_file['fixedSt']  = fixedSt
  
 '''
 numerical parameters
