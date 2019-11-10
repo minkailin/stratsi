@@ -23,7 +23,7 @@ matplotlib_logger.setLevel(logging.WARNING)
 physical parameters
 '''
 rhog0    = 1.0   #midplane gas density, density normalization 
-alpha0   = 1e-3  #alpha viscosity value, assumed constant
+alpha0   = 1e-5  #alpha viscosity value, assumed constant
 epsilon0 = 1.0   #midplane d/g ratio
 st0      = 1e-3  #assume a constant stokes number throughout 
 eta_hat0 = 0.05  #dimensionless radial pressure gradient, not used here but in eqm_horiz
@@ -40,7 +40,7 @@ beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 grid parameters
 '''
 zmin     = 0.0
-zmax     = 5.0
+zmax     = 2.0
 nz       = 512
 
 output_file = h5py.File('./eqm_vert.h5','w')
