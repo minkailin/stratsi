@@ -14,6 +14,8 @@ horizontal velocity ODEs for vgx (2nd order), vgy (2nd order), vdx (1st order), 
 impose pure gas solution at zmax. 
 physically this requires zmax to be large enough so that epsilon -> 0 there
 
+assume Omega=1, H=1, so cs=1
+
 """
 import sys
 import numpy as np
@@ -78,8 +80,8 @@ Delta2   = st0*st0 + (1.0 + epsilon0)**2
 parameters for this calculation
 '''
 nz = nz_data 
-inviscid = False #assume inviscid gas when calculating horizontal velocities?
-ignore_vdsq = False #ignore quadratic terms in dust velocity? would remove ODE for dust variables
+inviscid = True #assume inviscid gas when calculating horizontal velocities?
+ignore_vdsq = True #ignore quadratic terms in dust velocity? would remove ODE for dust variables
 
 '''
 numerical parameters
@@ -263,6 +265,7 @@ vgy.set_scales(domain.dealias)
 vdx.set_scales(domain.dealias)
 vdy.set_scales(domain.dealias)
 
+#cs=1.0
 vgx_norm = vgx['g']/np.abs(vgx0)
 vgy_norm = vgy['g']/np.abs(vgy0)
 vdx_norm = vdx['g']/np.abs(vdx0)
