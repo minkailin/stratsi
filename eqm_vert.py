@@ -1,4 +1,4 @@
-"""
+ """
 test dedalus ODE solver setup by solving the vertical structure with known analytic solution
 assume constant stokes number and diffusion throughout domain 
 """
@@ -23,9 +23,9 @@ matplotlib_logger.setLevel(logging.WARNING)
 physical parameters
 '''
 rhog0    = 1.0   #midplane gas density, density normalization 
-alpha0   = 1e-9  #alpha viscosity value, assumed constant
+alpha0   = 1e-6  #alpha viscosity value, assumed constant
 epsilon0 = 3.0   #midplane d/g ratio
-st0      = 0.1  #assume a constant stokes number throughout 
+st0      = 1.0e-3#assume a constant stokes number throughout 
 eta_hat0 = 0.05  #dimensionless radial pressure gradient, not used here but in eqm_horiz
 fixedSt  = True
 
@@ -40,7 +40,7 @@ beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 grid parameters
 '''
 zmin     = 0.0
-zmax     = 1.0e-5
+zmax     = 0.2
 nz       = 512
 
 output_file = h5py.File('./eqm_vert.h5','w')

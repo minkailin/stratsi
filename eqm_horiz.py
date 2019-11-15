@@ -80,8 +80,8 @@ Delta2   = st0*st0 + (1.0 + epsilon0)**2
 parameters for this calculation
 '''
 nz = nz_data 
-inviscid = True #assume inviscid gas when calculating horizontal velocities?
-ignore_vdsq = True #ignore quadratic terms in dust velocity? would remove ODE for dust variables
+inviscid = False #assume inviscid gas when calculating horizontal velocities?
+ignore_vdsq = False #ignore quadratic terms in dust velocity? would remove ODE for dust variables
 
 '''
 numerical parameters

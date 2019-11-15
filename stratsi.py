@@ -36,6 +36,8 @@ kx normalized by 1/Hgas
 
 kx = 1.0
 
+#ignore gas viscosity in linear problem?
+inviscid = True
 
 '''
 read in background vertical structure:
@@ -77,7 +79,7 @@ horiz_eqm.close()
 setup domain and calculate derivatives of vertical profiles as needed 
 '''
 
-nz_waves = 128 #384
+nz_waves = 32 #384
 z_basis = de.Chebyshev('z', nz_waves, interval=(zmin,zmax))
 domain_EVP = de.Domain([z_basis], comm=MPI.COMM_SELF)
 '''
@@ -85,8 +87,13 @@ notation: W = delta_rhog/rhog = delta_ln_rhog, Q=delta_eps/eps = delta_ln_eps, U
 W_p = W_primed (dW/dz)...etc
 '''
 
-waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
 
+if inviscid == False:
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
+if inviscid == True:
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
+
+    
 '''
 set up required vertical profiles in epsilon, rhog, rhod, and vdz
 '''
@@ -315,15 +322,20 @@ waves.substitutions['dust_zmom_LHS']="sigma*Udz + dvdz0*Udz + ikx*vdx0*Udz + vdz
 waves.substitutions['dust_zmom_RHS']="inv_stokes0*delta_ln_taus*vdz0 - inv_stokes0*(Udz - Ugz)"
 
 #gas continuity equation
-waves.substitutions['gas_mass_LHS']="sigma*W + ikx*(Ugx + vgx0*W) + dln_rhog0*Ugz + dz(Ugz)" 
-waves.substitutions['delta_vgz_pp']="-( sigma*dz(W) + ikx*(Ugx_p + dvgx0*W + vgx0*dz(W)) + d2ln_rhog0*Ugz + dln_rhog0*dz(Ugz) )" #take deriv of above eq to get d2(delta_vgz)/dz2
+waves.substitutions['gas_mass_LHS']="sigma*W + ikx*(Ugx + vgx0*W) + dln_rhog0*Ugz + dz(Ugz)"
 
 #linearized viscous forces on gas
 #could also use eqm eqns to replace first bracket, so that we don't need to take numerical derivs of vgx..etc
-waves.substitutions['delta_Fvisc_x'] = "alpha0*cs*Hgas*(ikx*dz(Ugz)/3 - 4*kx*kx*Ugx/3 + dln_rhog0*(ikx*Ugz + Ugx_p) + dz(Ugx_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgx0 + d2vgx0)*W"
-waves.substitutions['delta_Fvisc_y'] = "alpha0*cs*Hgas*(dln_rhog0*Ugy_p - kx*kx*Ugy + dz(Ugy_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgy0 + d2vgy0)*W"
-waves.substitutions['delta_Fvisc_z'] = "alpha0*cs*Hgas*(ikx*Ugx_p/3 - kx*kx*Ugz + dln_rhog0*(4*dz(Ugz)/3 - 2*ikx*Ugx/3) + 4*delta_vgz_pp/3)"
-
+if inviscid == False:
+    waves.substitutions['delta_vgz_pp']="-( sigma*dz(W) + ikx*(Ugx_p + dvgx0*W + vgx0*dz(W)) + d2ln_rhog0*Ugz + dln_rhog0*dz(Ugz) )" #take deriv of gas mass eq to get d2(delta_vgz)/dz2
+    waves.substitutions['delta_Fvisc_x'] = "alpha0*cs*Hgas*(ikx*dz(Ugz)/3 - 4*kx*kx*Ugx/3 + dln_rhog0*(ikx*Ugz + Ugx_p) + dz(Ugx_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgx0 + d2vgx0)*W"
+    waves.substitutions['delta_Fvisc_y'] = "alpha0*cs*Hgas*(dln_rhog0*Ugy_p - kx*kx*Ugy + dz(Ugy_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgy0 + d2vgy0)*W"
+    waves.substitutions['delta_Fvisc_z'] = "alpha0*cs*Hgas*(ikx*Ugx_p/3 - kx*kx*Ugz + dln_rhog0*(4*dz(Ugz)/3 - 2*ikx*Ugx/3) + 4*delta_vgz_pp/3)"
+if inviscid == True:
+    waves.substitutions['delta_Fvisc_x'] = "0"
+    waves.substitutions['delta_Fvisc_y'] = "0"
+    waves.substitutions['delta_Fvisc_z'] = "0"
+    
 #linearized back-reaction force on gas
 waves.substitutions['delta_backreaction_x']="inv_stokes0*epsilon0*( (vgx0 - vdx0)*(delta_ln_taus - Q) - (Ugx - Udx) )"
 waves.substitutions['delta_backreaction_y']="inv_stokes0*epsilon0*( (vgy0 - vdy0)*(delta_ln_taus - Q) - (Ugy - Udy) )"
@@ -344,24 +356,31 @@ waves.add_equation("dust_zmom_LHS - dust_zmom_RHS = 0")
 #equations for first derivs of perts, i.e. dz(Q) = Q_p ...etc
 #in our formulation of second derivs of [epsilon, delta_vgx, delta_vgy] appear
 waves.add_equation("dz(Q) - Q_p = 0")
-waves.add_equation("dz(Ugx) - Ugx_p = 0")
-waves.add_equation("dz(Ugy) - Ugy_p = 0")
+if inviscid == False:
+    waves.add_equation("dz(Ugx) - Ugx_p = 0")
+    waves.add_equation("dz(Ugy) - Ugy_p = 0")
 
 '''
 boundary conditions (reflection)
 '''
 waves.add_bc('left(dz(W))=0')
 waves.add_bc('left(Q_p)=0')
-waves.add_bc('left(Ugx_p)=0')
-waves.add_bc('left(Ugy_p)=0')
+if inviscid == False:
+    waves.add_bc('left(Ugx_p)=0')
+    waves.add_bc('left(Ugy_p)=0')
 waves.add_bc('left(Ugz)=0')
 waves.add_bc('left(dz(Udx))=0')
 waves.add_bc('left(dz(Udy))=0')
 waves.add_bc('left(Udz)=0')
 
-waves.add_bc('right(Ugx_p)=0')
-waves.add_bc('right(Ugy_p)=0')
+if inviscid == False:
+    waves.add_bc('right(Ugx_p)=0')
+    waves.add_bc('right(Ugy_p)=0')
 waves.add_bc('right(Ugz)=0')
+
+#waves.add_bc('right(Q)=0')
+#waves.add_bc('right(Udz)=0')
+
 
 #EP = Eigenproblem(waves)
 #freqs = []
