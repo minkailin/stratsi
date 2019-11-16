@@ -88,8 +88,8 @@ Delta2   = st0*st0 + (1.0 + epsilon0)**2
 parameters for this calculation
 '''
 nz = nz_data 
-inviscid = True #assume inviscid gas when calculating horizontal velocities?
-ignore_vdsq = True #ignore quadratic terms in dust velocity? would remove ODE for dust variables
+viscosity  = True #include viscosity in gas when calculating horizontal velocities?
+vdsq_terms = True #include quadratic terms in dust velocity? would remove ODE for dust variables
 
 '''
 numerical parameters
@@ -138,9 +138,9 @@ setup grid and problem
 z_basis = de.Chebyshev('z', nz, interval=(zmin,zmax), dealias=2)
 domain  = de.Domain([z_basis], np.float64, comm=MPI.COMM_SELF)
 
-if inviscid == False:
+if viscosity == True:
     problem = de.LBVP(domain, variables=['vgx', 'vgx_prime', 'vgy', 'vgy_prime', 'vdx', 'vdy'], ncc_cutoff=ncc_cutoff)
-if inviscid == True:
+if viscosity == False:
     problem = de.LBVP(domain, variables=['vgx', 'vgy', 'vdx', 'vdy'], ncc_cutoff=ncc_cutoff)
 
 '''
@@ -207,9 +207,8 @@ equilibrium equations
 '''
 full gas equations
 '''
-if inviscid == False:
+if viscosity ==  True:
     problem.add_equation("alpha0*dz(vgx_prime) + alpha0*dln_rhog_profile*vgx_prime + 2*vgy - eps_profile*(vgx - vdx)/stokes_profile = -2*eta_profile")
-  
     problem.add_equation("dz(vgx) - vgx_prime = 0")
     problem.add_equation("alpha0*dz(vgy_prime) + alpha0*dln_rhog_profile*vgy_prime - 0.5*vgx - eps_profile*(vgy - vdy)/stokes_profile = 0")
     problem.add_equation("dz(vgy) - vgy_prime = 0")
@@ -217,7 +216,7 @@ if inviscid == False:
 '''
 gas equations in the inviscid limit
 '''
-if inviscid == True:
+if viscosity == False:
     problem.add_equation("2*vgy - eps_profile*(vgx - vdx)/stokes_profile = -2*eta_profile")
     problem.add_equation("-0.5*vgx - eps_profile*(vgy - vdy)/stokes_profile = 0")
 
@@ -225,10 +224,10 @@ if inviscid == True:
 dust equations depending on if we ignore the v*dv/dz terms  
 result: since these terms are small, they don't make a practical difference.
 ''' 
-if ignore_vdsq == False:
+if vdsq_terms == True:
     problem.add_equation("vdz_profile*dz(vdx) - 2.0*vdy + (vdx - vgx)/stokes_profile = 0")
     problem.add_equation("vdz_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/stokes_profile = 0")
-if ignore_vdsq == True:
+if vdsq_terms == False:
     problem.add_equation("-2.0*vdy + (vdx - vgx)/stokes_profile = 0")
     problem.add_equation("0.5*vdx + (vdy - vgy)/stokes_profile = 0")
            
@@ -238,13 +237,13 @@ use analytic solution at z=infinity (pure gas disk) to set vgx, vgy, vdx, vdy at
 set vgx and vgy to be symmetric about midplane
 '''
 
-if inviscid == False: #full 2nd order ODE in gas velocities 
+if viscosity == True: #full 2nd order ODE in gas velocities 
     problem.add_bc("right(vgx)           = 0")
     problem.add_bc("left(vgx_prime)      = 0")
     problem.add_bc("right(vgy)           =-right(eta_profile)")
     problem.add_bc("left(vgy_prime)      = 0")
     
-if ignore_vdsq == False: #then get 1st order ODE in dust velocities, need to impose BC 
+if vdsq_terms == True: #then get 1st order ODE in dust velocities, need to impose BC 
     problem.add_bc("right(vdx)            = -2.0*right(stokes_profile*eta_profile)/(1.0 + right(stokes_profile**2.0))")
     problem.add_bc("right(vdy)            = -right(eta_profile)/(1.0 + right(stokes_profile**2.0))")
 

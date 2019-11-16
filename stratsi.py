@@ -36,10 +36,13 @@ kx normalized by 1/Hgas
 
 kx = 10.0
 
-#ignore gas viscosity in linear problem? (also implies no diffusion)
-inviscid = True
-#particle backreaction?
-backreaction = False
+'''
+physics options 
+can choose to include/exclude: gas viscosity, particle diffusion, particle backreaction
+'''
+viscosity    = True
+diffusion    = True
+backreaction = True
 
 '''
 read in background vertical structure:
@@ -90,9 +93,16 @@ W_p = W_primed (dW/dz)...etc
 '''
 
 
-if inviscid == False:
+if (viscosity == True) and (diffusion == True):#full problem: include viscosity and particle diffusion
     waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
-if inviscid == True:
+
+if (viscosity == True) and (diffusion == False):#include viscosity but no particle diffusion
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma')
+    
+if (viscosity == False) and (diffusion == True):#ignore gas viscosity but include particle diffusion 
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
+    
+if (viscosity == False) and (diffusion == False):#ignore gas viscosity and ignore diffusion  
     waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma')
 
     
@@ -282,28 +292,16 @@ waves.parameters['d2vgy0']            = d2vgy0
 waves.parameters['inv_stokes0']    = inv_stokes0
 
 
-
-
-# fig = plt.figure(figsize=(8,4.5))
-# ax = fig.add_subplot()
-# plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-# z    = domain_EVP.grid(0, scales=16)
-# #vgx0  = solver.state['vgx0']
-# vgx0.set_scales(scales=16)
-# plt.plot(z, vgx0['g'], linewidth=2, label=r'$v_{gx}/|v_{gx0}|$')
-# fname = 'eqm_temp'
-# plt.savefig(fname,dpi=150)
-
 # W is (delta_rhog)/rhog, Q is (delta_epsilon)/epsilon  
 
 waves.substitutions['ikx'] = "1j*kx"
 waves.substitutions['delta_ln_rhod'] = "Q + W"
 
-if inviscid == False:
+if diffusion == True:
     waves.substitutions['delta_ln_rhod_p'] = "Q_p + dz(W)"
     waves.substitutions['delta_eps_p_over_eps'] = "dln_epsilon0*Q + Q_p"
     waves.substitutions['delta_eps_pp_over_eps'] = "d2epsilon0*Q/epsilon0 + 2*dln_epsilon0*Q_p + dz(Q_p)"
-if inviscid == True:
+if diffusion == False:
     waves.substitutions['delta_ln_rhod_p'] = "dz(Q) + dz(W)"
     
 if fixedSt == True:
@@ -313,9 +311,9 @@ else:
 
 #dust continuity equation
 waves.substitutions['dust_mass_LHS']="sigma*delta_ln_rhod + ikx*(Udx + vdx0*delta_ln_rhod) + dln_rhod0*(Udz + vdz0*delta_ln_rhod) + vdz0*delta_ln_rhod_p + dvdz0*delta_ln_rhod + dz(Udz)"
-if inviscid == False :
+if diffusion == True:
     waves.substitutions['dust_mass_RHS']="delta0*cs*Hgas*(dln_epsilon0*(dln_rhog0*W + dz(W)) + d2epsilon0*W/epsilon0 - kx*kx*Q + dln_rhog0*delta_eps_p_over_eps + delta_eps_pp_over_eps)"
-if inviscid == True:
+if diffusion == False:
     waves.substitutions['dust_mass_RHS']="0"
 
 #dust x-mom equation
@@ -335,12 +333,12 @@ waves.substitutions['gas_mass_LHS']="sigma*W + ikx*(Ugx + vgx0*W) + dln_rhog0*Ug
 
 #linearized viscous forces on gas
 #could also use eqm eqns to replace first bracket, so that we don't need to take numerical derivs of vgx..etc
-if inviscid == False:
+if viscosity == True:
     waves.substitutions['delta_vgz_pp']="-( sigma*dz(W) + ikx*(Ugx_p + dvgx0*W + vgx0*dz(W)) + d2ln_rhog0*Ugz + dln_rhog0*dz(Ugz) )" #take deriv of gas mass eq to get d2(delta_vgz)/dz2
     waves.substitutions['delta_Fvisc_x'] = "alpha0*cs*Hgas*(ikx*dz(Ugz)/3 - 4*kx*kx*Ugx/3 + dln_rhog0*(ikx*Ugz + Ugx_p) + dz(Ugx_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgx0 + d2vgx0)*W"
     waves.substitutions['delta_Fvisc_y'] = "alpha0*cs*Hgas*(dln_rhog0*Ugy_p - kx*kx*Ugy + dz(Ugy_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgy0 + d2vgy0)*W"
     waves.substitutions['delta_Fvisc_z'] = "alpha0*cs*Hgas*(ikx*Ugx_p/3 - kx*kx*Ugz + dln_rhog0*(4*dz(Ugz)/3 - 2*ikx*Ugx/3) + 4*delta_vgz_pp/3)"
-if inviscid == True:
+if viscosity == False:
     waves.substitutions['delta_Fvisc_x'] = "0"
     waves.substitutions['delta_Fvisc_y'] = "0"
     waves.substitutions['delta_Fvisc_z'] = "0"
@@ -370,8 +368,9 @@ waves.add_equation("dust_zmom_LHS - dust_zmom_RHS = 0")
 
 #equations for first derivs of perts, i.e. dz(Q) = Q_p ...etc
 #in our formulation of second derivs of [epsilon, delta_vgx, delta_vgy] appear for full problem with viscosity
-if inviscid == False:
+if diffusion == True:
     waves.add_equation("dz(Q) - Q_p = 0")
+if viscosity == True:
     waves.add_equation("dz(Ugx) - Ugx_p = 0")
     waves.add_equation("dz(Ugy) - Ugy_p = 0")
 
@@ -383,13 +382,14 @@ waves.add_bc('left(Ugz)=0')
 waves.add_bc('left(dz(Udx))=0')
 waves.add_bc('left(dz(Udy))=0')
 waves.add_bc('left(Udz)=0')
-if inviscid == False:
+if diffusion == True:
     waves.add_bc('left(Q_p)=0')
+if viscosity == True:
     waves.add_bc('left(Ugx_p)=0')
     waves.add_bc('left(Ugy_p)=0')
 
 waves.add_bc('right(Ugz)=0')
-if inviscid == False:
+if viscosity == True:
     waves.add_bc('right(Ugx_p)=0')
     waves.add_bc('right(Ugy_p)=0')
 
@@ -400,8 +400,6 @@ EP.EVP.parameters['kx'] = kx
 EP.solve()
 EP.reject_spurious()
 sigma = EP.evalues_good
-
-
     
 # Solver
 # solver = waves.build_solver()
