@@ -34,6 +34,14 @@ matplotlib_logger.setLevel(logging.WARNING)
 
 comm = MPI.COMM_WORLD
 
+
+'''
+normalizations 
+'''
+Omega  = 1.0
+Hgas   = 1.0
+cs     = Hgas*Omega
+
 '''
 process command line arguements
 '''
@@ -80,8 +88,8 @@ Delta2   = st0*st0 + (1.0 + epsilon0)**2
 parameters for this calculation
 '''
 nz = nz_data 
-inviscid = False #assume inviscid gas when calculating horizontal velocities?
-ignore_vdsq = False #ignore quadratic terms in dust velocity? would remove ODE for dust variables
+inviscid = True #assume inviscid gas when calculating horizontal velocities?
+ignore_vdsq = True #ignore quadratic terms in dust velocity? would remove ODE for dust variables
 
 '''
 numerical parameters
@@ -265,11 +273,16 @@ vgy.set_scales(domain.dealias)
 vdx.set_scales(domain.dealias)
 vdy.set_scales(domain.dealias)
 
-#cs=1.0
-vgx_norm = vgx['g']/np.abs(vgx0)
-vgy_norm = vgy['g']/np.abs(vgy0)
-vdx_norm = vdx['g']/np.abs(vdx0)
-vdy_norm = vdy['g']/np.abs(vdy0)
+
+# vgx_norm = vgx['g']/np.abs(vgx0)
+# vgy_norm = vgy['g']/np.abs(vgy0)
+# vdx_norm = vdx['g']/np.abs(vdx0)
+# vdy_norm = vdy['g']/np.abs(vdy0)
+
+vgx_norm = vgx['g']
+vgy_norm = vgy['g']
+vdx_norm = vdx['g']
+vdy_norm = vdy['g']
 
 '''
 plot equilibrium velocities 
@@ -299,10 +312,17 @@ else:
 plt.ylim(ymin,ymax)
 plt.xlim(xmin,xmax)
 
-plt.plot(z, vgx_norm, linewidth=2, label=r'$v_{gx}/|v_{gx0}|$')
-plt.plot(z, vgy_norm, linewidth=2, label=r'$v_{gy}/|v_{gy0}|$')
-plt.plot(z, vdx_norm, linewidth=2, label=r'$v_{dx}/|v_{dx0}|$',linestyle='dashed')
-plt.plot(z, vdy_norm, linewidth=2, label=r'$v_{dy}/|v_{dy0}|$',linestyle='dashed')
+# plt.plot(z, vgx_norm, linewidth=2, label=r'$v_{gx}/|v_{gx0}|$')
+# plt.plot(z, vgy_norm, linewidth=2, label=r'$v_{gy}/|v_{gy0}|$')
+# plt.plot(z, vdx_norm, linewidth=2, label=r'$v_{dx}/|v_{dx0}|$',linestyle='dashed')
+# plt.plot(z, vdy_norm, linewidth=2, label=r'$v_{dy}/|v_{dy0}|$',linestyle='dashed')
+
+plt.plot(z, vgx_norm, linewidth=2, label=r'$v_{gx}/c_s$')
+plt.plot(z, vgy_norm, linewidth=2, label=r'$v_{gy}/c_s$')
+plt.plot(z, vdx_norm, linewidth=2, label=r'$v_{dx}/c_s$',linestyle='dashed')
+plt.plot(z, vdy_norm, linewidth=2, label=r'$v_{dy}/c_s$',linestyle='dashed')
+
+
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -319,10 +339,10 @@ plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 plt.yticks(fontsize=fontsize,weight='bold')
 plt.ylabel(r'$velocities$', fontsize=fontsize)
 
-unity = np.zeros(len(z))
-unity[:] = 1.0
-plt.plot(z, unity, linewidth=1, linestyle='dotted',color='black')
-plt.plot(z, -unity, linewidth=1, linestyle='dotted',color='black')
+# unity = np.zeros(len(z))
+# unity[:] = 1.0
+# plt.plot(z, unity, linewidth=1, linestyle='dotted',color='black')
+# plt.plot(z, -unity, linewidth=1, linestyle='dotted',color='black')
 
 fname = 'eqm_velocity'
 plt.savefig(fname,dpi=150)

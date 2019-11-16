@@ -3,7 +3,7 @@
 stratified linear analysis of the streaming instability
 
 """
-
+import sys
 import numpy as np
 from mpi4py import MPI
 import matplotlib.pyplot as plt
@@ -34,10 +34,12 @@ parameters for eigenvalue problem
 kx normalized by 1/Hgas
 '''
 
-kx = 1.0
+kx = 10.0
 
-#ignore gas viscosity in linear problem?
+#ignore gas viscosity in linear problem? (also implies no diffusion)
 inviscid = True
+#particle backreaction?
+backreaction = False
 
 '''
 read in background vertical structure:
@@ -91,7 +93,7 @@ W_p = W_primed (dW/dz)...etc
 if inviscid == False:
     waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
 if inviscid == True:
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma')
 
     
 '''
@@ -296,10 +298,14 @@ waves.parameters['inv_stokes0']    = inv_stokes0
 
 waves.substitutions['ikx'] = "1j*kx"
 waves.substitutions['delta_ln_rhod'] = "Q + W"
-waves.substitutions['delta_ln_rhod_p'] = "Q_p + dz(W)"
-waves.substitutions['delta_eps_p_over_eps'] = "dln_epsilon0*Q + Q_p"
-waves.substitutions['delta_eps_pp_over_eps'] = "d2epsilon0*Q/epsilon0 + 2*dln_epsilon0*Q_p + dz(Q_p)"
 
+if inviscid == False:
+    waves.substitutions['delta_ln_rhod_p'] = "Q_p + dz(W)"
+    waves.substitutions['delta_eps_p_over_eps'] = "dln_epsilon0*Q + Q_p"
+    waves.substitutions['delta_eps_pp_over_eps'] = "d2epsilon0*Q/epsilon0 + 2*dln_epsilon0*Q_p + dz(Q_p)"
+if inviscid == True:
+    waves.substitutions['delta_ln_rhod_p'] = "dz(Q) + dz(W)"
+    
 if fixedSt == True:
     waves.substitutions['delta_ln_taus'] = "0"
 else:
@@ -307,7 +313,10 @@ else:
 
 #dust continuity equation
 waves.substitutions['dust_mass_LHS']="sigma*delta_ln_rhod + ikx*(Udx + vdx0*delta_ln_rhod) + dln_rhod0*(Udz + vdz0*delta_ln_rhod) + vdz0*delta_ln_rhod_p + dvdz0*delta_ln_rhod + dz(Udz)"
-waves.substitutions['dust_mass_RHS']="delta0*cs*Hgas*(dln_epsilon0*(dln_rhog0*W + dz(W)) + d2epsilon0*W/epsilon0 - kx*kx*Q + dln_rhog0*delta_eps_p_over_eps + delta_eps_pp_over_eps)"
+if inviscid == False :
+    waves.substitutions['dust_mass_RHS']="delta0*cs*Hgas*(dln_epsilon0*(dln_rhog0*W + dz(W)) + d2epsilon0*W/epsilon0 - kx*kx*Q + dln_rhog0*delta_eps_p_over_eps + delta_eps_pp_over_eps)"
+if inviscid == True:
+    waves.substitutions['dust_mass_RHS']="0"
 
 #dust x-mom equation
 waves.substitutions['dust_xmom_LHS']="sigma*Udx + dvdx0*Udz + ikx*vdx0*Udx + vdz0*dz(Udx)"
@@ -337,10 +346,16 @@ if inviscid == True:
     waves.substitutions['delta_Fvisc_z'] = "0"
     
 #linearized back-reaction force on gas
-waves.substitutions['delta_backreaction_x']="inv_stokes0*epsilon0*( (vgx0 - vdx0)*(delta_ln_taus - Q) - (Ugx - Udx) )"
-waves.substitutions['delta_backreaction_y']="inv_stokes0*epsilon0*( (vgy0 - vdy0)*(delta_ln_taus - Q) - (Ugy - Udy) )"
-waves.substitutions['delta_backreaction_z']="inv_stokes0*epsilon0*( (     - vdz0)*(delta_ln_taus - Q) - (Ugz - Udz) )"
+if backreaction == True:
+    waves.substitutions['delta_backreaction_x']="inv_stokes0*epsilon0*( (vgx0 - vdx0)*(delta_ln_taus - Q) - (Ugx - Udx) )"
+    waves.substitutions['delta_backreaction_y']="inv_stokes0*epsilon0*( (vgy0 - vdy0)*(delta_ln_taus - Q) - (Ugy - Udy) )"
+    waves.substitutions['delta_backreaction_z']="inv_stokes0*epsilon0*( (     - vdz0)*(delta_ln_taus - Q) - (Ugz - Udz) )"
+if backreaction == False:
+    waves.substitutions['delta_backreaction_x']="0"
+    waves.substitutions['delta_backreaction_y']="0"
+    waves.substitutions['delta_backreaction_z']="0"
 
+    
 #gas equations
 waves.add_equation("gas_mass_LHS = 0 ")
 waves.add_equation("sigma*Ugx + dvgx0*Ugz + ikx*vgx0*Ugx - 2*Omega*Ugy + ikx*cs*cs*W - delta_backreaction_x - delta_Fvisc_x = 0")
@@ -354,9 +369,9 @@ waves.add_equation("dust_ymom_LHS - dust_ymom_RHS = 0 ")
 waves.add_equation("dust_zmom_LHS - dust_zmom_RHS = 0")
 
 #equations for first derivs of perts, i.e. dz(Q) = Q_p ...etc
-#in our formulation of second derivs of [epsilon, delta_vgx, delta_vgy] appear
-waves.add_equation("dz(Q) - Q_p = 0")
+#in our formulation of second derivs of [epsilon, delta_vgx, delta_vgy] appear for full problem with viscosity
 if inviscid == False:
+    waves.add_equation("dz(Q) - Q_p = 0")
     waves.add_equation("dz(Ugx) - Ugx_p = 0")
     waves.add_equation("dz(Ugy) - Ugy_p = 0")
 
@@ -364,66 +379,76 @@ if inviscid == False:
 boundary conditions (reflection)
 '''
 waves.add_bc('left(dz(W))=0')
-waves.add_bc('left(Q_p)=0')
-if inviscid == False:
-    waves.add_bc('left(Ugx_p)=0')
-    waves.add_bc('left(Ugy_p)=0')
 waves.add_bc('left(Ugz)=0')
 waves.add_bc('left(dz(Udx))=0')
 waves.add_bc('left(dz(Udy))=0')
 waves.add_bc('left(Udz)=0')
+if inviscid == False:
+    waves.add_bc('left(Q_p)=0')
+    waves.add_bc('left(Ugx_p)=0')
+    waves.add_bc('left(Ugy_p)=0')
 
+waves.add_bc('right(Ugz)=0')
 if inviscid == False:
     waves.add_bc('right(Ugx_p)=0')
     waves.add_bc('right(Ugy_p)=0')
-waves.add_bc('right(Ugz)=0')
-
-#waves.add_bc('right(Q)=0')
-#waves.add_bc('right(Udz)=0')
 
 
-#EP = Eigenproblem(waves)
-#freqs = []
-#eigenfunctions = {'W':[], 'Q':[]}
-#EP.EVP.namespace['kx'].value = kx
-#EP.EVP.parameters['kx'] = kx
-#EP.solve()
-#EP.reject_spurious()
-#sigma = EP.evalues_good
-#freqs.append(sigma)
-#eigenfunctions['W'].append([])
-#eigenfunctions['Q'].append([])
+EP = Eigenproblem(waves)
+EP.EVP.namespace['kx'].value = kx
+EP.EVP.parameters['kx'] = kx
+EP.solve()
+EP.reject_spurious()
+sigma = EP.evalues_good
 
+
+    
 # Solver
-solver = waves.build_solver()
-t1 = time.time()
-solver.solve_dense(solver.pencils[0])
-t2 = time.time()
-logger.info('Elapsed solve time: %f' %(t2-t1))
+# solver = waves.build_solver()
+# t1 = time.time()
+# solver.solve_dense(solver.pencils[0])
+# t2 = time.time()
+# logger.info('Elapsed solve time: %f' %(t2-t1))
 
 # Filter infinite/nan eigenmodes
 #finite = np.isfinite(solver.eigenvalues)
 
-sigma   = solver.eigenvalues
-growth  = np.real(sigma)
-abs_sig = np.abs(sigma) 
-#growth_acceptable = growth[np.logical_and(growth > 0.0, growth < 1.0)]
-growth_acceptable = np.logical_and(growth > 0.0, abs_sig < 1.0)
+#sigma   = solver.eigenvalues
+#growth  = np.real(sigma)
+#abs_sig = np.abs(sigma) 
+##growth_acceptable = growth[np.logical_and(growth > 0.0, growth < 1.0)]
+##growth_acceptable = np.logical_and(growth > 0.0, abs_sig < 1.0)
+#growth_acceptable = abs_sig < Omega
 
-solver.eigenvalues = solver.eigenvalues[growth_acceptable]
-solver.eigenvectors = solver.eigenvectors[:, growth_acceptable]
-sigma  = solver.eigenvalues
-growth = np.real(solver.eigenvalues)
-g1 = np.argmax(growth)
-print('most unstable mode',sigma[g1])
+#solver.eigenvalues = solver.eigenvalues[growth_acceptable]
+#solver.eigenvectors = solver.eigenvectors[:, growth_acceptable]
+#sigma  = solver.eigenvalues
 
-solver.set_state(g1)
-Q = solver.state['Q']
-Q_bot = Q.interpolate(z=0)['g'][0]
-data_norm = np.conj(Q_bot)/np.abs(Q_bot)**2
+growth =  np.real(sigma)
+freq   = -np.imag(sigma) #define  s= s_r - i*omega 
+N = 2 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
+g1 = np.argmin(np.abs(np.power(kx*freq,2.0)-N))
+print(g1)
+print(sigma[g1])
+
+N_actual = np.power(kx*freq[g1]*Hgas/Omega,2.0)
+print(N_actual)
+
+g1 = (EP.evalues_good_index[g1])
+EP.solver.set_state(g1)
+W = EP.solver.state['W']
+Ugz = EP.solver.state['Ugz']
+
+# solver.set_state(g1)
+# W = solver.state['W']
+# Ugz = solver.state['Ugz']
+
+W_bot = W.interpolate(z=0)['g'][0]
+data_norm = np.conj(W_bot)/np.abs(W_bot)**2
+
 
 '''
-plotting parameters
+#plotting parameters
 '''
 fontsize= 24
 nlev    = 128
@@ -435,10 +460,10 @@ ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
 z    = domain_EVP.grid(0, scales=16)
-Q.set_scales(scales=16)
+Ugz.set_scales(scales=16)
 
-plt.plot(z, np.real(Q['g']*data_norm), linewidth=2, label=r'real')
-plt.plot(z, np.imag(Q['g']*data_norm), linewidth=2, label=r'imaginary')
+plt.plot(z, np.real(Ugz['g']*data_norm), linewidth=2, label=r'real')
+plt.plot(z, np.imag(Ugz['g']*data_norm), linewidth=2, label=r'imaginary')
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -449,10 +474,13 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta\rho_d/\rho_d$', fontsize=fontsize)
+#plt.ylabel(r'$\delta\rho_g/\rho_g$', fontsize=fontsize)
+plt.ylabel(r'$\delta v_{gz}/c_s$', fontsize=fontsize)
 
-fname = 'stratsi_Q'
+fname = 'stratsi_result'
 plt.savefig(fname,dpi=150)
+
+
 
 
 '''
