@@ -88,7 +88,7 @@ Delta2   = st0*st0 + (1.0 + epsilon0)**2
 parameters for this calculation
 '''
 nz = nz_data 
-viscosity  = True #include viscosity in gas when calculating horizontal velocities?
+viscosity  = False #include viscosity in gas when calculating horizontal velocities?
 vdsq_terms = True #include quadratic terms in dust velocity? would remove ODE for dust variables
 
 '''

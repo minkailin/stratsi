@@ -1,6 +1,10 @@
 """
 test dedalus ODE solver setup by solving the vertical structure with known analytic solution
 assume constant stokes number and diffusion throughout domain 
+
+this version utilizes the one-fluid approximation 
+assumes particle stokes number is strictly constant
+
 """
 
 import numpy as np
@@ -24,23 +28,28 @@ physical parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
 alpha0   = 1.0e-3   #alpha viscosity value, assumed constant
-epsilon0 = 0.1     #midplane d/g ratio
+epsilon0 = 0.01      #midplane d/g ratio
 st0      = 1.0e-3   #assume a constant stokes number throughout 
 eta_hat0 = 0.0      #dimensionless radial pressure gradient, not used here but in eqm_horiz
-fixedSt  = True
+
+'''
+normalizations 
+'''
+Omega  = 1.0
+Hgas   = 1.0
+cs     = Hgas*Omega
 
 '''
 assume a constant diffusion coefficient throughout. 
-slight inconsistency here because gas visc depends on height, but not particle diffusion (for simplicity)
 '''
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
-    
+
 '''
 grid parameters
 '''
-zmin     = 0.0
-zmax     = 5.0
+zmin     = 1.0e-6
+zmax     = 3.0
 nz       = 128
 
 output_file = h5py.File('./eqm_vert.h5','w')
@@ -54,14 +63,12 @@ output_file['beta']     = beta
 output_file['zmin']     = zmin
 output_file['zmax']     = zmax
 output_file['nz']       = nz
-output_file['fixedSt']  = fixedSt
- 
+
 '''
 numerical parameters
 '''
-ncc_cutoff = 1e-13
+ncc_cutoff = 1e-12
 tolerance  = 1e-8
-vdz2_form  = False
 
 '''
 plotting parameters
@@ -80,17 +87,22 @@ def epsilon_analytic(z):
 def rhog_analytic(z):
     return rhog0*np.exp( (delta0/st0)*(epsilon_analytic(z) - epsilon0) - 0.5*z*z)
 
+def Press_analytic(z):
+    return cs*cs*rhog_analytic(z)
+
 def rhog_analytic_dustfree(z):
     return rhog0*np.exp(-0.5*z*z)
     
 def vdust_analytic(z):
-    return -beta*z
+    return -beta*z*Omega
 
+def vz_analytic(z): #vz = (rhog*vgz + rhod*vdz)/rho_tot; and vgz = 0 in eqm
+    eps = epsilon_analytic(z)
+    fd  = eps/(1.0+eps)
+    return vdust_analytic(z)*fd
+    
 def stokes(rhog):
-    if fixedSt == True:
-        return st0*rhog/rhog
-    if fixedSt == False:
-        return st0*rhog0/rhog
+    return st0*rhog/rhog #so that it returns an array for output
     
 def eta_hat(z):
     #assume constant radial pressure gradient for now (division by z/z to convert to array for output)
@@ -102,135 +114,53 @@ domain setup
 '''
 z_basis = de.Chebyshev('z', nz, interval=(zmin,zmax), dealias=2)
 domain = de.Domain([z_basis], grid_dtype=np.float64)#, comm=MPI.COMM_SELF)
+  
+problem = de.NLBVP(domain, variables=['epsilon', 'ln_P', 'vz'], ncc_cutoff=ncc_cutoff)
 
-'''
-setup stokes number function for use in dedalus solver
-'''
-'''
-def stokes_ded(*args):
-    return args[0].data**2
-def stokes_func(*args, domain=domain, F=stokes_ded):
-    return de.operators.GeneralFunction(domain, layout='g', func=F, args=args)
-de.operators.parseables['stokes_func'] = stokes_func
-'''
-'''
-def F(*args):
-    z =args[0].data
-    return np.sin(z) #st0, rhog0 = const params
-def G(*args, domain=domain, F=F):
-    return de.operators.GeneralFunction(domain, layout='g', func=F, args=args)
-de.operators.parseables['G'] = G
-'''
+problem.parameters['cs']       = cs
+problem.parameters['Hgas']     = Hgas
+problem.parameters['Omega']    = Omega
+problem.parameters['tau_s']    = st0/Omega
 
-'''
-for chi=vdz^2 formulation
-'''
-if vdz2_form == True: 
-    problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'chi'], ncc_cutoff=ncc_cutoff)
-    
-'''
-for vdz formulation
-'''
-if vdz2_form == False:
-    problem = de.NLBVP(domain, variables=['ln_epsilon', 'ln_rhog', 'vdz'], ncc_cutoff=ncc_cutoff)
-
-problem.parameters['rhog0']      = rhog0
-problem.parameters['st0']        = st0
 problem.parameters['delta0']     = delta0
 
-problem.parameters['ln_epsilon0'] = np.log(epsilon_analytic(zmin))
-problem.parameters['ln_rhog0']    = np.log(rhog_analytic(zmin))
-problem.parameters['vdust0']      = vdust_analytic(zmin)
+problem.parameters['eps0']     = epsilon_analytic(zmin)
+problem.parameters['ln_P0']    = np.log(Press_analytic(zmin))
+problem.parameters['vz0']      = vz_analytic(zmin)
 
 '''
-for stokes ~1/rhog,
+using "vdz" formulation
 '''
-if fixedSt == False: 
-    '''
-    using "vdz" formulation
-    '''
-    if vdz2_form == False:
-        problem.add_equation("dz(ln_epsilon) = vdz/delta0")
-        problem.add_equation("dz(ln_rhog) = exp(ln_epsilon + ln_rhog)*vdz/(st0*rhog0) - z") 
-        problem.add_equation("dz(vdz) = -z/vdz - exp(ln_rhog)/(st0*rhog0)")        
-        
-    '''
-    using "chi=vdz^2" formulation
-    '''
-    if vdz2_form == True:
-        problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
-        problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon + ln_rhog)*sqrt(chi)/(st0*rhog0) - z") 
-        problem.add_equation("dz(chi) = -2.0*z + 2.0*exp(ln_rhog)*sqrt(chi)/(st0*rhog0)")          
 
-'''
-for constant stokes number
-'''
-if fixedSt == True:
-    '''
-    using "vdz" formulation
-    '''
-    if vdz2_form == False:
-        problem.add_equation("dz(ln_epsilon) = vdz/delta0")
-        problem.add_equation("dz(ln_rhog) = exp(ln_epsilon)*vdz/st0 - z") 
-        problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0")  
-        #problem.add_equation("dz(vdz) = -z/vdz - 1.0/st0 + G(z)")  
-        
-    '''
-    using "chi=vdz^2" formulation
-    '''
-    if vdz2_form == True:
-        problem.add_equation("dz(ln_epsilon) = -sqrt(chi)/delta0")
-        problem.add_equation("dz(ln_rhog) = -exp(ln_epsilon)*sqrt(chi)/st0 - z")
-        problem.add_equation("dz(chi) = -2.0*z + 2.0*sqrt(chi)/st0")
+problem.add_equation("delta0*cs*Hgas*dz(epsilon) = (1 + epsilon)*vz")
+problem.add_equation("dz(ln_P) = (1 + epsilon)*(1 + epsilon)*vz/(cs*cs*tau_s*epsilon)") 
+problem.add_equation("dz(vz) = -(1 + epsilon)/(tau_s*epsilon) - Omega*Omega*z/vz")  
+#problem.add_equation("vz = -epsilon*tau_s*Omega*Omega*z/(1 + epsilon)") 
+
 
 '''
 boundary conditions
 '''     
-problem.add_bc("left(ln_epsilon)   = ln_epsilon0")
-problem.add_bc("left(ln_rhog)      = ln_rhog0")
-'''
-for vdz formulation 
-'''
-if vdz2_form == False:
-    problem.add_bc("left(vdz)          = vdust0")
-
-'''
-for chi=vdz^2 formulation 
-'''
-if vdz2_form == True:
-    problem.add_bc("left(chi)          = vdust0*vdust0")
+problem.add_bc("left(epsilon) = eps0")
+problem.add_bc("left(ln_P)    = ln_P0")
+problem.add_bc("left(vz)      = vz0")
 
 solver = problem.build_solver()
 
 # Setup initial guess
 z            = domain.grid(0, scales=domain.dealias)
-ln_epsilon   = solver.state['ln_epsilon']
-ln_rhog      = solver.state['ln_rhog']
 
-ln_epsilon.set_scales(domain.dealias)
-ln_rhog.set_scales(domain.dealias)
+epsilon      = solver.state['epsilon']
+ln_P         = solver.state['ln_P']
+vz           = solver.state['vz']
 
-epsilon_guess = epsilon_analytic(z)
-rhog_guess    = rhog_analytic(z)   
-vdust_guess   = vdust_analytic(z)
+epsilon.set_scales(domain.dealias)
+ln_P.set_scales(domain.dealias)
+vz.set_scales(domain.dealias)
 
-ln_epsilon['g'] = np.log(epsilon_guess)
-ln_rhog['g']    = np.log(rhog_guess)
-
-'''
-for vdz formulation 
-'''
-if vdz2_form == False:
-    vdz          = solver.state['vdz']
-    vdz.set_scales(domain.dealias)
-    vdz['g']        = vdust_guess
-'''
-for chi=vdz^2 formulation 
-'''
-if vdz2_form == True:
-    chi          = solver.state['chi']
-    chi.set_scales(domain.dealias)
-    chi['g']        = vdust_guess**2
+epsilon['g'] = epsilon_analytic(z)
+ln_P['g']    = np.log(Press_analytic(z))
+vz['g']      = vz_analytic(z)
 
 
 # Iterations
@@ -262,8 +192,8 @@ if do_plot:
 #    plt.ylim(ymin,ymax)
 #    plt.xlim(xmin,xmax)
 
-    epsilon = np.exp(ln_epsilon['g'])
-    plt.plot(z, epsilon,linewidth=2, label='numerical solution')
+    epsilon_guess = epsilon_analytic(z)
+    plt.plot(z, epsilon['g'],linewidth=2, label='numerical solution')
     plt.plot(z, epsilon_guess,linewidth=2,linestyle='dashed', label='initial guess')
             
     plt.rc('font',size=fontsize,weight='bold')
@@ -280,7 +210,7 @@ if do_plot:
     plt.yticks(fontsize=fontsize,weight='bold')
     plt.ylabel(r'$\epsilon$',fontsize=fontsize)
 
-    fname = 'eqm_epsilon'
+    fname = 'eqm_epsilon_1fluid'
     plt.savefig(fname,dpi=150)
 
     '''
@@ -293,14 +223,10 @@ if do_plot:
 #    plt.ylim(ymin,ymax)
 #    plt.xlim(xmin,xmax)
 
-
-if vdz2_form == True:
-    vdust = -np.sqrt(chi['g'])
-if vdz2_form == False:
-    vdust = vdz['g']
+    vz_guess = vz_analytic(z)
     
-    plt.plot(z, vdust*1e3,linewidth=2, label='numerical solution')
-    plt.plot(z, vdust_guess*1e3,linewidth=2,linestyle='dashed', label='initial guess')
+    plt.plot(z, vz['g']*1e3/cs,linewidth=2, label='numerical solution')
+    plt.plot(z, vz_guess*1e3/cs,linewidth=2,linestyle='dashed', label='initial guess')
             
     plt.rc('font',size=fontsize,weight='bold')
 
@@ -314,11 +240,10 @@ if vdz2_form == False:
     plt.xlabel('$z/H_g$',fontsize=fontsize)
 
     plt.yticks(fontsize=fontsize,weight='bold')
-    plt.ylabel(r'$10^3v_{dz}/c_s$',fontsize=fontsize)
+    plt.ylabel(r'$10^3v_z/c_s$',fontsize=fontsize)
 
-    fname = 'eqm_vdust'
+    fname = 'eqm_vz_1fluid'
     plt.savefig(fname,dpi=150)
-
 
     '''
     plot equilibrium gas density 
@@ -330,7 +255,8 @@ if vdz2_form == False:
 #    plt.ylim(ymin,ymax)
 #    plt.xlim(xmin,xmax)
 
-    rhog = np.exp(ln_rhog['g'])
+    rhog = np.exp(ln_P['g'])/cs/cs
+    rhog_guess = Press_analytic(z)/cs/cs
     plt.plot(z, rhog,linewidth=2, label='numerical solution')
     plt.plot(z, rhog_guess,linewidth=2,linestyle='dashed', label='initial guess')
     plt.plot(z, rhog_analytic_dustfree(z),linewidth=2, label='pure gas limit')
@@ -351,21 +277,21 @@ if vdz2_form == False:
     plt.yticks(fontsize=fontsize,weight='bold')
     plt.ylabel(r'$\rho_g/\rho_{g0}$',fontsize=fontsize)
 
-    fname = 'eqm_rhog'
+    fname = 'eqm_rhog_1fluid'
     plt.savefig(fname,dpi=150)
     
 #plt.show()
 
 zaxis = domain.grid(0,scales=1)
-ln_epsilon.set_scales(1, keep_data=True)
-ln_rhog.set_scales(1, keep_data=True)
-vdz.set_scales(1, keep_data=True)
+epsilon.set_scales(1, keep_data=True)
+ln_P.set_scales(1, keep_data=True)
+vz.set_scales(1, keep_data=True)
 
 output_file['z']       = zaxis
-output_file['ln_epsilon'] = ln_epsilon['g']
-output_file['ln_rhog']    = ln_rhog['g']
-output_file['vdz']     = vdz['g']
-rhog = np.exp(ln_rhog['g'])
+output_file['epsilon'] = epsilon['g']
+output_file['ln_P']    = ln_P['g']
+output_file['vz']      = vz['g']
+rhog = np.exp(ln_P['g'])/cs/cs
 output_file['stokes']  = stokes(rhog)
 output_file['eta']     = eta_hat(zaxis)
 

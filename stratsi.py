@@ -40,7 +40,7 @@ kx = 10.0
 physics options 
 can choose to include/exclude: gas viscosity, particle diffusion, particle backreaction
 '''
-viscosity    = True
+viscosity    = False
 diffusion    = True
 backreaction = True
 
@@ -424,8 +424,11 @@ sigma = EP.evalues_good
 
 growth =  np.real(sigma)
 freq   = -np.imag(sigma) #define  s= s_r - i*omega 
-N = 2 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
-g1 = np.argmin(np.abs(np.power(kx*freq,2.0)-N))
+N = 0 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
+#g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
+#g1 = np.argmin(np.abs(freq))
+g1=np.argmin(np.abs(sigma))
+
 print(g1)
 print(sigma[g1])
 
@@ -436,13 +439,14 @@ g1 = (EP.evalues_good_index[g1])
 EP.solver.set_state(g1)
 W = EP.solver.state['W']
 Ugz = EP.solver.state['Ugz']
+Udz = EP.solver.state['Udz']
 
 # solver.set_state(g1)
 # W = solver.state['W']
 # Ugz = solver.state['Ugz']
 
 W_bot = W.interpolate(z=0)['g'][0]
-data_norm = np.conj(W_bot)/np.abs(W_bot)**2
+data_norm = np.conj(W_bot)/np.abs(W_bot)**2*1e4
 
 
 '''
@@ -458,10 +462,11 @@ ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
 z    = domain_EVP.grid(0, scales=16)
-Ugz.set_scales(scales=16)
+Udz.set_scales(scales=16)
+max_Udz = np.amax(np.abs(Udz['g']))
 
-plt.plot(z, np.real(Ugz['g']*data_norm), linewidth=2, label=r'real')
-plt.plot(z, np.imag(Ugz['g']*data_norm), linewidth=2, label=r'imaginary')
+plt.plot(z, np.real(Udz['g'])/max_Udz, linewidth=2, label=r'real')
+plt.plot(z, np.imag(Udz['g'])/max_Udz, linewidth=2, label=r'imaginary')
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -473,11 +478,37 @@ plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
 #plt.ylabel(r'$\delta\rho_g/\rho_g$', fontsize=fontsize)
-plt.ylabel(r'$\delta v_{gz}/c_s$', fontsize=fontsize)
+#plt.ylabel(r'$\delta v_{gz}/c_s$', fontsize=fontsize)
+plt.ylabel(r'$\delta v_{dz}/|\delta v_{dz}|_{max}$', fontsize=fontsize)
 
-fname = 'stratsi_result'
+fname = 'stratsi_vdz'
 plt.savefig(fname,dpi=150)
 
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+z    = domain_EVP.grid(0, scales=16)
+Ugz.set_scales(scales=16)
+max_Ugz = np.amax(np.abs(Ugz['g']))
+
+plt.plot(z, np.real(Ugz['g'])/max_Ugz, linewidth=2, label=r'real')
+plt.plot(z, np.imag(Ugz['g'])/max_Ugz, linewidth=2, label=r'imaginary')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$\delta v_{gz}/|\delta v_{gz}|_{max}$', fontsize=fontsize)
+
+fname = 'stratsi_vgz'
+plt.savefig(fname,dpi=150)
 
 
 
