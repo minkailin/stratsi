@@ -28,9 +28,9 @@ physical parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
 alpha0   = 1.0e-3   #alpha viscosity value, assumed constant
-epsilon0 = 0.01      #midplane d/g ratio
+epsilon0 = 1.0e0      #midplane d/g ratio
 st0      = 1.0e-3   #assume a constant stokes number throughout 
-eta_hat0 = 0.0      #dimensionless radial pressure gradient, not used here but in eqm_horiz
+eta_hat0 = 0.05      #dimensionless radial pressure gradient, not used here but in eqm_horiz
 
 '''
 normalizations 
@@ -46,11 +46,16 @@ delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 
 '''
+are we including the advection vz*vz' term? (atm code only works if it's neglected...)
+'''
+vz2_term = False 
+    
+'''
 grid parameters
 '''
-zmin     = 1.0e-6
-zmax     = 3.0
-nz       = 128
+zmin     = 0.0
+zmax     = 5.0
+nz       = 512
 
 output_file = h5py.File('./eqm_vert.h5','w')
 output_file['rhog0']    = rhog0
@@ -79,7 +84,7 @@ nclev   = 6
 cmap    = plt.cm.inferno
 
 '''
-analytical equilibria for constant stokes number and diffusion 
+analytical equilibria for constant stokes number and diffusion (from two fluid equations)
 '''
 def epsilon_analytic(z):
     return epsilon0*np.exp(-0.5*beta*z*z/delta0)
@@ -129,13 +134,15 @@ problem.parameters['ln_P0']    = np.log(Press_analytic(zmin))
 problem.parameters['vz0']      = vz_analytic(zmin)
 
 '''
-using "vdz" formulation
+equilibrium equations
 '''
 
 problem.add_equation("delta0*cs*Hgas*dz(epsilon) = (1 + epsilon)*vz")
 problem.add_equation("dz(ln_P) = (1 + epsilon)*(1 + epsilon)*vz/(cs*cs*tau_s*epsilon)") 
-problem.add_equation("dz(vz) = -(1 + epsilon)/(tau_s*epsilon) - Omega*Omega*z/vz")  
-#problem.add_equation("vz = -epsilon*tau_s*Omega*Omega*z/(1 + epsilon)") 
+if vz2_term == True:
+    problem.add_equation("dz(vz) = -(1 + epsilon)/(tau_s*epsilon) - Omega*Omega*z/vz")
+if vz2_term == False:
+    problem.add_equation("vz = -epsilon*tau_s*Omega*Omega*z/(1 + epsilon)") 
 
 
 '''
@@ -143,7 +150,8 @@ boundary conditions
 '''     
 problem.add_bc("left(epsilon) = eps0")
 problem.add_bc("left(ln_P)    = ln_P0")
-problem.add_bc("left(vz)      = vz0")
+if vz2_term == True:
+    problem.add_bc("left(vz)      = vz0")
 
 solver = problem.build_solver()
 
@@ -260,7 +268,6 @@ if do_plot:
     plt.plot(z, rhog,linewidth=2, label='numerical solution')
     plt.plot(z, rhog_guess,linewidth=2,linestyle='dashed', label='initial guess')
     plt.plot(z, rhog_analytic_dustfree(z),linewidth=2, label='pure gas limit')
-    
     
     plt.rc('font',size=fontsize,weight='bold')
 
