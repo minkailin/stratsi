@@ -23,9 +23,9 @@ matplotlib_logger.setLevel(logging.WARNING)
 physical parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
-alpha0   = 1.0e-3   #alpha viscosity value, assumed constant
+alpha0   = 1e-3   #alpha viscosity value, assumed constant
 epsilon0 = 0.5     #midplane d/g ratio
-st0      = 1.0e-2   #assume a constant stokes number throughout 
+st0      = 1e-2   #assume a constant stokes number throughout 
 eta_hat0 = 0.05      #dimensionless radial pressure gradient, not used here but in eqm_horiz
 fixedSt  = True
 

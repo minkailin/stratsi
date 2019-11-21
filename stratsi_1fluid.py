@@ -56,7 +56,7 @@ problem parameters
 
 alpha0    = 1e-3
 st0       = 1e-2
-dg0       = 0.5
+dg0       = 0.01
 eta_hat   = 0.05
 
 zmin      = 0
@@ -339,16 +339,17 @@ boundary conditions (reflection)
 '''
 if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('left(dW)=0')
-    waves.add_bc('left(Q)=0')
-    #    waves.add_bc('left(dQ)=0')
+#    waves.add_bc('left(Q)=0')
+    waves.add_bc('left(dQ)=0')
     waves.add_bc('left(dz(Ux))=0')
     waves.add_bc('left(dz(Uy))=0')
     waves.add_bc('left(Uz)=0')
-    waves.add_bc('right(Q) = 0')
+
+    waves.add_bc('right(dW) = 0')
+#    waves.add_bc('right(Q) = 0')
     waves.add_bc('right(Uz) = 0')
 
 #    waves.add_bc('right(W)  = 0')
-
 
 if (diffusion == False) and (tstop == True): 
     waves.add_bc('left(dW)=0')
@@ -396,11 +397,20 @@ print(sigma)
 #sys.exit()
 
 growth =  np.real(sigma)
-freq   = -np.imag(sigma) #define  s= s_r - i*omega 
+freq   = -np.imag(sigma) #define  s= s_r - i*omega
+abs_sig = np.abs(sigma)
+growth_acceptable = abs_sig < Omega
+
+sigma = sigma[growth_acceptable]
+growth =  np.real(sigma)
+freq   = -np.imag(sigma) #define  s= s_r - i*omega
+
 N = 6 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
 g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
 #g1 = np.argmin(np.abs(freq))
 #g1=np.argmin(np.abs(sigma))
+
+#g1=np.argmax(growth)
 
 print(g1)
 print(sigma[g1])
@@ -408,7 +418,10 @@ print(sigma[g1])
 N_actual = np.power(kx*freq[g1]*Hgas/Omega,2.0)
 print(N_actual)
 
-g1 = (EP.evalues_good_index[g1])
+#g1 = (EP.evalues_good_index[g1])
+g1 = np.argmin(np.abs(EP.evalues-sigma[g1]))
+
+
 EP.solver.set_state(g1)
 Uz = EP.solver.state['Uz']
 Q  = EP.solver.state['Q']

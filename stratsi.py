@@ -388,8 +388,8 @@ if viscosity == True:
     waves.add_bc('left(Ugx_p)=0')
     waves.add_bc('left(Ugy_p)=0')
 
-waves.add_bc('right(Ugz)=0')
-#waves.add_bc('right(W)=0')
+#waves.add_bc('right(Ugz)=0')
+waves.add_bc('right(dz(W))=0')
 if viscosity == True:
     waves.add_bc('right(Ugx_p)=0')
     waves.add_bc('right(Ugy_p)=0')
@@ -432,6 +432,8 @@ N = 6 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omeg
 g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
 #g1 = np.argmin(np.abs(freq))
 #g1=np.argmin(np.abs(sigma))
+
+#g1=np.argmax(growth)
 
 print(g1)
 print(sigma[g1])
@@ -485,8 +487,8 @@ plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 plt.yticks(fontsize=fontsize,weight='bold')
 #plt.ylabel(r'$\delta\rho_g/\rho_g$', fontsize=fontsize)
 #plt.ylabel(r'$\delta v_{gz}/c_s$', fontsize=fontsize)
-#plt.ylabel(r'$\delta v_{dz}/|\delta v_{dz}|_{max}$', fontsize=fontsize)
-plt.ylabel(r'$\delta v_{dz}$', fontsize=fontsize)
+plt.ylabel(r'$\delta v_{dz}/|\delta v_{dz}|_{max}$', fontsize=fontsize)
+#plt.ylabel(r'$\delta v_{dz}$', fontsize=fontsize)
 
 fname = 'stratsi_vdz'
 plt.savefig(fname,dpi=150)
