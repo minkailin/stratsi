@@ -28,9 +28,9 @@ physical parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
 alpha0   = 1.0e-3   #alpha viscosity value, assumed constant
-epsilon0 = 1.0e0      #midplane d/g ratio
+epsilon0 = 0.01      #midplane d/g ratio
 st0      = 1.0e-3   #assume a constant stokes number throughout 
-eta_hat0 = 0.05      #dimensionless radial pressure gradient, not used here but in eqm_horiz
+eta_hat0 = 0.0      #dimensionless radial pressure gradient, not used here but in eqm_horiz
 
 '''
 normalizations 
@@ -55,9 +55,9 @@ grid parameters
 '''
 zmin     = 0.0
 zmax     = 5.0
-nz       = 512
+nz       = 128
 
-output_file = h5py.File('./eqm_vert.h5','w')
+output_file = h5py.File('./eqm_vert_1fluid.h5','w')
 output_file['rhog0']    = rhog0
 output_file['alpha0']   = alpha0
 output_file['epsilon0'] = epsilon0

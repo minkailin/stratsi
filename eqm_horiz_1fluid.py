@@ -59,7 +59,7 @@ if(args.ylim):
 '''
 read in parameters from 'eqm_vert.py'
 '''
-output_file = h5py.File('./eqm_vert.h5', 'r')
+output_file = h5py.File('./eqm_vert_1fluid.h5', 'r')
 rhog0    = output_file['rhog0'][()]
 alpha0   = output_file['alpha0'][()]
 epsilon0 = output_file['epsilon0'][()]
@@ -90,7 +90,7 @@ vsq_terms = False #include quadratic terms in velocity?
 numerical parameters
 '''
 ncc_cutoff = 1e-12
-tolerance  = 1e-12
+tolerance  = 1e-8
 
 '''
 setup grid and problem 
@@ -232,7 +232,7 @@ plt.savefig(fname,dpi=150)
 '''
 output vertical profiles of horizontal velocites
 '''
-output_file = h5py.File('./eqm_horiz.h5','w')
+output_file = h5py.File('./eqm_horiz_1fluid.h5','w')
 zaxis = domain.grid(0,scales=1)
 vx.set_scales(1, keep_data=True)
 vy.set_scales(1, keep_data=True)

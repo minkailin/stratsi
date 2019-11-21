@@ -24,9 +24,9 @@ physical parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
 alpha0   = 1.0e-3   #alpha viscosity value, assumed constant
-epsilon0 = 0.1     #midplane d/g ratio
-st0      = 1.0e-3   #assume a constant stokes number throughout 
-eta_hat0 = 0.0      #dimensionless radial pressure gradient, not used here but in eqm_horiz
+epsilon0 = 0.5     #midplane d/g ratio
+st0      = 1.0e-2   #assume a constant stokes number throughout 
+eta_hat0 = 0.05      #dimensionless radial pressure gradient, not used here but in eqm_horiz
 fixedSt  = True
 
 '''
@@ -40,7 +40,7 @@ beta     =(1.0/st0 - (1.0/st0)*np.sqrt(1.0 - 4.0*st0**2))/2.0
 grid parameters
 '''
 zmin     = 0.0
-zmax     = 5.0
+zmax     = 2.0
 nz       = 128
 
 output_file = h5py.File('./eqm_vert.h5','w')
@@ -259,26 +259,27 @@ if do_plot:
     ax = fig.add_subplot()
     plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
-#    plt.ylim(ymin,ymax)
-#    plt.xlim(xmin,xmax)
+    plt.ylim(0,epsilon0)
+    plt.xlim(zmin,zmax)
 
     epsilon = np.exp(ln_epsilon['g'])
     plt.plot(z, epsilon,linewidth=2, label='numerical solution')
-    plt.plot(z, epsilon_guess,linewidth=2,linestyle='dashed', label='initial guess')
+#    plt.plot(z, epsilon_guess,linewidth=2,linestyle='dashed', label='initial guess')
             
     plt.rc('font',size=fontsize,weight='bold')
 
-    lines1, labels1 = ax.get_legend_handles_labels()
-    legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-    #  legend.get_frame().set_linewidth(0.0)
+#    lines1, labels1 = ax.get_legend_handles_labels()
+#    legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
 
+#  legend.get_frame().set_linewidth(0.0)
     #plt.title(title,weight='bold')
 
     plt.xticks(fontsize=fontsize,weight='bold')
     plt.xlabel('$z/H_g$',fontsize=fontsize)
 
     plt.yticks(fontsize=fontsize,weight='bold')
-    plt.ylabel(r'$\epsilon$',fontsize=fontsize)
+#    plt.ylabel(r'$\epsilon$',fontsize=fontsize)
+    plt.ylabel(r'$\rho_d/\rho_g$',fontsize=fontsize)
 
     fname = 'eqm_epsilon'
     plt.savefig(fname,dpi=150)
@@ -306,8 +307,8 @@ if vdz2_form == False:
 
     lines1, labels1 = ax.get_legend_handles_labels()
     legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-    #  legend.get_frame().set_linewidth(0.0)
 
+#  legend.get_frame().set_linewidth(0.0)
     #plt.title(title,weight='bold')
 
     plt.xticks(fontsize=fontsize,weight='bold')
