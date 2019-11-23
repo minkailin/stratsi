@@ -41,7 +41,7 @@ parameters for eigenvalue problem
 kx normalized by 1/Hgas
 '''
 
-kx = 10.0
+kx = 600.0
 
 '''
 physics options 
@@ -54,14 +54,14 @@ tstop        = True
 problem parameters
 '''
 
-alpha0    = 1e-3
-st0       = 1e-2
-dg0       = 0.01
+alpha0    = 1e-3#1e-6
+st0       = 1e-2#0.1
+dg0       = 1.0#3.0
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 2.0
-nz_waves  = 32
+zmax      = 2#0.02
+nz_waves  = 64
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -339,16 +339,15 @@ boundary conditions (reflection)
 '''
 if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('left(dW)=0')
-#    waves.add_bc('left(Q)=0')
     waves.add_bc('left(dQ)=0')
     waves.add_bc('left(dz(Ux))=0')
     waves.add_bc('left(dz(Uy))=0')
     waves.add_bc('left(Uz)=0')
 
     waves.add_bc('right(dW) = 0')
-#    waves.add_bc('right(Q) = 0')
+#    waves.add_bc('right(dQ) = 0')
+   
     waves.add_bc('right(Uz) = 0')
-
 #    waves.add_bc('right(W)  = 0')
 
 if (diffusion == False) and (tstop == True): 
@@ -357,8 +356,10 @@ if (diffusion == False) and (tstop == True):
     waves.add_bc('left(dz(Ux))=0')
     waves.add_bc('left(dz(Uy))=0')
     waves.add_bc('left(Uz)=0')
-    waves.add_bc('right(Uz) = 0')
-
+    
+#    waves.add_bc('right(Uz) = 0')
+    waves.add_bc('right(dQ)=0')
+#    waves.add_bc('right(dW) = 0')
     
 if (diffusion == False) and (tstop == False): #no diffusion, perfect coupling, 2 odes (standard problem)
     waves.add_bc('left(Uz)=0')
@@ -399,18 +400,19 @@ print(sigma)
 growth =  np.real(sigma)
 freq   = -np.imag(sigma) #define  s= s_r - i*omega
 abs_sig = np.abs(sigma)
-growth_acceptable = abs_sig < Omega
 
+growth_acceptable = abs_sig < Omega
 sigma = sigma[growth_acceptable]
+
 growth =  np.real(sigma)
 freq   = -np.imag(sigma) #define  s= s_r - i*omega
 
 N = 6 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
-g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
+#g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
 #g1 = np.argmin(np.abs(freq))
 #g1=np.argmin(np.abs(sigma))
 
-#g1=np.argmax(growth)
+g1=np.argmax(growth)
 
 print(g1)
 print(sigma[g1])
@@ -488,6 +490,32 @@ plt.yticks(fontsize=fontsize,weight='bold')
 plt.ylabel(r'$\delta \rho_{g}/\rho_{g}$', fontsize=fontsize)
 
 fname = 'stratsi_W_1fluid'
+plt.savefig(fname,dpi=150)
+
+######################################################################################################
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+z    = domain_EVP.grid(0, scales=16)
+Q.set_scales(scales=16)
+Qnorm = np.conj(Q['g'][0])/np.power(np.abs(Q['g'][0]),2)
+
+plt.plot(z, np.real(Q['g']*Qnorm), linewidth=2, label=r'real')
+plt.plot(z, np.imag(Q['g']*Qnorm), linewidth=2, label=r'imaginary')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$\delta \epsilon/\epsilon$', fontsize=fontsize)
+
+fname = 'stratsi_Q_1fluid'
 plt.savefig(fname,dpi=150)
 
 ######################################################################################################

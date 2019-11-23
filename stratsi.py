@@ -34,7 +34,7 @@ parameters for eigenvalue problem
 kx normalized by 1/Hgas
 '''
 
-kx = 10.0
+kx = 600.0
 
 '''
 physics options 
@@ -378,19 +378,24 @@ if viscosity == True:
 boundary conditions (reflection)
 '''
 waves.add_bc('left(dz(W))=0')
-waves.add_bc('left(Ugz)=0')
-waves.add_bc('left(dz(Udx))=0')
-waves.add_bc('left(dz(Udy))=0')
-waves.add_bc('left(Udz)=0')
+# waves.add_bc('left(Ugz)=0')
+# waves.add_bc('left(dz(Udx))=0')
+# waves.add_bc('left(dz(Udy))=0')
+# waves.add_bc('left(Udz)=0')
+# waves.add_bc('right(Ugz)=0')
+
+waves.add_bc('left(dz(Ugx - epsilon0*vgx0*Q/(1+epsilon0) + epsilon0*Udx + epsilon0*vdx0*Q/(1+epsilon0)))=0')
+waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilon0*vdy0*Q/(1+epsilon0)))=0')
+waves.add_bc('left(Ugz + epsilon0*Udz)=0')
+waves.add_bc('right(dz(W))=0')
+waves.add_bc('right(Ugz + epsilon0*Udz + epsilon0*vdz0*Q/(1+epsilon0))=0')
+
 if diffusion == True:
     waves.add_bc('left(Q_p)=0')
+
 if viscosity == True:
     waves.add_bc('left(Ugx_p)=0')
     waves.add_bc('left(Ugy_p)=0')
-
-#waves.add_bc('right(Ugz)=0')
-waves.add_bc('right(dz(W))=0')
-if viscosity == True:
     waves.add_bc('right(Ugx_p)=0')
     waves.add_bc('right(Ugy_p)=0')
 
@@ -427,13 +432,22 @@ print(sigma)
 #sigma  = solver.eigenvalues
 
 growth =  np.real(sigma)
-freq   = -np.imag(sigma) #define  s= s_r - i*omega 
+freq   = -np.imag(sigma) #define  s= s_r - i*omega
+abs_sig = np.abs(sigma)
+
+growth_acceptable = abs_sig < Omega
+sigma = sigma[growth_acceptable]
+
+growth =  np.real(sigma)
+freq   = -np.imag(sigma)
+
+
 N = 6 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
-g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
+#g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
 #g1 = np.argmin(np.abs(freq))
 #g1=np.argmin(np.abs(sigma))
 
-#g1=np.argmax(growth)
+g1=np.argmax(growth)
 
 print(g1)
 print(sigma[g1])
@@ -441,7 +455,10 @@ print(sigma[g1])
 N_actual = np.power(kx*freq[g1]*Hgas/Omega,2.0)
 print(N_actual)
 
-g1 = (EP.evalues_good_index[g1])
+#g1 = (EP.evalues_good_index[g1])
+g1 = np.argmin(np.abs(EP.evalues-sigma[g1]))
+
+
 EP.solver.set_state(g1)
 W = EP.solver.state['W']
 Ugz = EP.solver.state['Ugz']
