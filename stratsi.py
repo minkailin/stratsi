@@ -34,7 +34,7 @@ parameters for eigenvalue problem
 kx normalized by 1/Hgas
 '''
 
-kx = 600.0
+kx = 400.0
 
 '''
 physics options 
@@ -84,7 +84,7 @@ horiz_eqm.close()
 setup domain and calculate derivatives of vertical profiles as needed 
 '''
 
-nz_waves = 32 #384
+nz_waves = 256 #384
 z_basis = de.Chebyshev('z', nz_waves, interval=(zmin,zmax))
 domain_EVP = de.Domain([z_basis], comm=MPI.COMM_SELF)
 '''
@@ -387,7 +387,8 @@ waves.add_bc('left(dz(W))=0')
 waves.add_bc('left(dz(Ugx - epsilon0*vgx0*Q/(1+epsilon0) + epsilon0*Udx + epsilon0*vdx0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilon0*vdy0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(Ugz + epsilon0*Udz)=0')
-waves.add_bc('right(dz(W))=0')
+#waves.add_bc('right(dz(W))=0')
+waves.add_bc('right(Q)=0')
 waves.add_bc('right(Ugz + epsilon0*Udz + epsilon0*vdz0*Q/(1+epsilon0))=0')
 
 if diffusion == True:
@@ -461,6 +462,7 @@ g1 = np.argmin(np.abs(EP.evalues-sigma[g1]))
 
 EP.solver.set_state(g1)
 W = EP.solver.state['W']
+Q = EP.solver.state['Q']
 Ugz = EP.solver.state['Ugz']
 Udz = EP.solver.state['Udz']
 
@@ -484,19 +486,21 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
 z    = domain_EVP.grid(0, scales=16)
 Udz.set_scales(scales=16)
-max_Udz = -np.amax(np.abs(Udz['g']))
-Udz_norm = np.conj(Udz['g'][0])/max_Udz/max_Udz #np.power(np.abs(Udz['g'][0]),2)
+max_Udz = np.amax(np.abs(Udz['g']))
+Udz_norm = np.conj(Udz['g'][0])*Udz['g']#/max_Udz/max_Udz #np.power(np.abs(Udz['g'][0]),2)
 
 #plt.ylim(0,1)
 #plt.xlim(zmin,zmax)
 
-plt.plot(z, np.real(Udz['g'])/max_Udz, linewidth=2, label=r'real')
-plt.plot(z, np.imag(Udz['g'])/max_Udz, linewidth=2, label=r'imaginary')
+plt.plot(z, np.real(Udz_norm)/np.amax(np.abs(Udz_norm)), linewidth=2, label=r'real')
+plt.plot(z, np.imag(Udz_norm)/np.amax(np.abs(Udz_norm)), linewidth=2, label=r'imaginary')
+
+#plt.plot(z, np.abs(Udz['g'])/max_Udz, linewidth=2, label=r'absolute')
 
 plt.rc('font',size=fontsize,weight='bold')
 
 lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, fontsize=fontsize/2)
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
 
 plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
@@ -520,8 +524,10 @@ z    = domain_EVP.grid(0, scales=16)
 Ugz.set_scales(scales=16)
 max_Ugz = np.amax(np.abs(Ugz['g']))
 
-plt.plot(z, np.real(Ugz['g'])/max_Ugz, linewidth=2, label=r'real')
-plt.plot(z, np.imag(Ugz['g'])/max_Ugz, linewidth=2, label=r'imaginary')
+Ugz_norm = np.conj(Ugz['g'][0])/max_Ugz/max_Ugz
+
+plt.plot(z, np.real(Ugz['g']*Ugz_norm), linewidth=2, label=r'real')
+plt.plot(z, np.imag(Ugz['g']*Ugz_norm), linewidth=2, label=r'imaginary')
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -544,11 +550,12 @@ ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
 z    = domain_EVP.grid(0, scales=16)
-W.set_scales(scales=16)
-Wnorm = np.conj(W['g'][0])/np.power(np.abs(W['g'][0]),2)
+Q.set_scales(scales=16)
+Qmax = np.amax(np.abs(Q['g']))
+#Wnorm = np.conj(W['g'][0])/np.power(np.abs(W['g'][0]),2)
 
-plt.plot(z, np.real(W['g']*Wnorm), linewidth=2, label=r'real')
-plt.plot(z, np.imag(W['g']*Wnorm), linewidth=2, label=r'imaginary')
+plt.plot(z, np.real(Q['g'])/Qmax, linewidth=2, label=r'real')
+plt.plot(z, np.imag(Q['g'])/Qmax, linewidth=2, label=r'imaginary')
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -559,9 +566,9 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta \rho_{g}/\rho_{g}$', fontsize=fontsize)
+plt.ylabel(r'$\delta \epsilon/\epsilon$', fontsize=fontsize)
 
-fname = 'stratsi_W'
+fname = 'stratsi_Q'
 plt.savefig(fname,dpi=150)
 
 

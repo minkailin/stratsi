@@ -41,7 +41,7 @@ parameters for eigenvalue problem
 kx normalized by 1/Hgas
 '''
 
-kx = 600.0
+kx = 400.0
 
 '''
 physics options 
@@ -54,14 +54,14 @@ tstop        = True
 problem parameters
 '''
 
-alpha0    = 1e-3#1e-6
-st0       = 1e-2#0.1
-dg0       = 1.0#3.0
+alpha0    = 1e-7#1e-5#1e-6
+st0       = 1e-2#1e-2#0.1
+dg0       = 3.0#3.0
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 2#0.02
-nz_waves  = 64
+zmax      = 0.04
+nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -347,8 +347,9 @@ if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('right(dW) = 0')
 #    waves.add_bc('right(dQ) = 0')
    
-    waves.add_bc('right(Uz) = 0')
+#    waves.add_bc('right(Uz) = 0')
 #    waves.add_bc('right(W)  = 0')
+    waves.add_bc('right(Q)  = 0')
 
 if (diffusion == False) and (tstop == True): 
     waves.add_bc('left(dW)=0')
@@ -443,13 +444,16 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
 z    = domain_EVP.grid(0, scales=16)
 Uz.set_scales(scales=16)
-max_Uz = np.amax(np.abs(Uz['g']))
-plt.plot(z, np.real(Uz['g'])/max_Uz, linewidth=2, label=r'real')
-plt.plot(z, np.imag(Uz['g'])/max_Uz, linewidth=2, label=r'imaginary')
 
-#Uz_norm = np.conj(Uz['g'][0])/max_Uz/max_Uz
-#plt.plot(z, np.real(Uz['g']*Uz_norm), linewidth=2, label=r'real')
-#plt.plot(z, np.imag(Uz['g']*Uz_norm), linewidth=2, label=r'imaginary')
+max_Uz = np.amax(np.abs(Uz['g']))
+#plt.plot(z, np.real(Uz['g'])/max_Uz, linewidth=2, label=r'real')
+#plt.plot(z, np.imag(Uz['g'])/max_Uz, linewidth=2, label=r'imaginary')
+
+Uz_norm = np.conj(Uz['g'][0])*Uz['g']
+plt.plot(z, np.real(Uz_norm)/np.amax(np.abs(Uz_norm)), linewidth=2, label=r'real')
+plt.plot(z, np.imag(Uz_norm)/np.amax(np.abs(Uz_norm)), linewidth=2, label=r'imaginary')
+
+#plt.plot(z, np.abs(Uz['g'])/max_Uz, linewidth=2, label=r'real')
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -499,10 +503,11 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
 z    = domain_EVP.grid(0, scales=16)
 Q.set_scales(scales=16)
+Qmax = np.amax(np.abs(Q['g']))
 Qnorm = np.conj(Q['g'][0])/np.power(np.abs(Q['g'][0]),2)
 
-plt.plot(z, np.real(Q['g']*Qnorm), linewidth=2, label=r'real')
-plt.plot(z, np.imag(Q['g']*Qnorm), linewidth=2, label=r'imaginary')
+plt.plot(z, np.real(Q['g'])/Qmax, linewidth=2, label=r'real')
+plt.plot(z, np.imag(Q['g'])/Qmax, linewidth=2, label=r'imaginary')
 
 plt.rc('font',size=fontsize,weight='bold')
 
