@@ -4,10 +4,6 @@ stratified linear analysis of the streaming instability
 
 ONE FLUID APPROX
 
-TODO: the equilibrium is read in, but since only analytic equilibria works with those codes, 
-eventually we can just calc eqm profiles as needed here. 
-
-
 """
 import sys
 import numpy as np
@@ -41,7 +37,7 @@ parameters for eigenvalue problem
 kx normalized by 1/Hgas
 '''
 
-kx = 400.0
+kx = 800.0
 
 '''
 physics options 
@@ -53,14 +49,13 @@ tstop        = True
 '''
 problem parameters
 '''
-
-alpha0    = 1e-7#1e-5#1e-6
-st0       = 1e-2#1e-2#0.1
-dg0       = 3.0#3.0
-eta_hat   = 0.05
+alpha0    = 1e-8
+st0       = 1e-3
+dg0       = 3.0
+eta_hat   = 0.0
 
 zmin      = 0
-zmax      = 0.04
+zmax      = 0.02
 nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
@@ -74,7 +69,7 @@ visc  = alpha0*cs*Hgas
 
 '''
 functions to calc eqm profiles
-analytic profiles neglecting quadratic terms
+these analytic profiles *neglecting* quadratic terms (so not exact)
 '''
 
 def epsilon_eqm(z):
@@ -504,7 +499,7 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 z    = domain_EVP.grid(0, scales=16)
 Q.set_scales(scales=16)
 Qmax = np.amax(np.abs(Q['g']))
-Qnorm = np.conj(Q['g'][0])/np.power(np.abs(Q['g'][0]),2)
+#Qnorm = np.conj(Q['g'][0])/np.power(np.abs(Q['g'][0]),2)
 
 plt.plot(z, np.real(Q['g'])/Qmax, linewidth=2, label=r'real')
 plt.plot(z, np.imag(Q['g'])/Qmax, linewidth=2, label=r'imaginary')

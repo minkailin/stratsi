@@ -1,81 +1,16 @@
 """
-
 stratified linear analysis of the streaming instability
-
 """
-import sys
-import numpy as np
-from mpi4py import MPI
-import matplotlib.pyplot as plt
-from dedalus import public as de
-import time
 
-import logging
-logger = logging.getLogger(__name__)
-
-matplotlib_logger = logging.getLogger('matplotlib')
-matplotlib_logger.setLevel(logging.WARNING)
-
-comm = MPI.COMM_WORLD
-
-logger.info("stratified streaming instability")
-from eigenproblem import Eigenproblem #added by MKL
-import h5py
+from stratsi_params import *
+from eigenproblem import Eigenproblem
 
 '''
-normalizations 
+read in background vertical profiles of vgx, vgy, vdx, vdy
 '''
-Omega  = 1.0
-Hgas   = 1.0
-cs     = Hgas*Omega
-
-'''
-parameters for eigenvalue problem
-kx normalized by 1/Hgas
-'''
-
-kx = 400.0
-
-nz_waves = 32 #384
-
-'''
-physics options 
-can choose to include/exclude: gas viscosity, particle diffusion, particle backreaction
-'''
-viscosity    = False
-diffusion    = True
-backreaction = True
-
-'''
-read in background vertical structure:
-epsilon, rhog, vdust_z, from eqm_vert
-
-'''
-
-vert_eqm = h5py.File('./eqm_vert.h5', 'r')
-rhog0    = vert_eqm['rhog0'][()]
-alpha0   = vert_eqm['alpha0'][()]
-epsilon0 = vert_eqm['epsilon0'][()]
-st0      = vert_eqm['st0'][()]
-eta_hat0 = vert_eqm['eta_hat0'][()]
-delta0   = vert_eqm['delta0'][()] 
-beta     = vert_eqm['beta'][()]
-zmin     = vert_eqm['zmin'][()]
-zmax     = vert_eqm['zmax'][()]
-nz_vert  = vert_eqm['nz'][()]
-fixedSt  = vert_eqm['fixedSt'][()]
-
-zaxis_vert= vert_eqm['z'][:]
-ln_epsilon= vert_eqm['ln_epsilon'][:]
-ln_rhog   = vert_eqm['ln_rhog'][:]
-vdz       = vert_eqm['vdz'][:]
-stokes    = vert_eqm['stokes'][:]
-eta       = vert_eqm['eta'][:]
-vert_eqm.close()
 
 horiz_eqm  = h5py.File('./eqm_horiz.h5', 'r')
 zaxis_horiz= horiz_eqm['z'][:]
-nz_horiz   = horiz_eqm['nz'][()]
 vgx        = horiz_eqm['vgx'][:]
 vgy        = horiz_eqm['vgy'][:]
 vdx        = horiz_eqm['vdx'][:]
@@ -88,109 +23,85 @@ setup domain and calculate derivatives of vertical profiles as needed
 
 z_basis = de.Chebyshev('z', nz_waves, interval=(zmin,zmax))
 domain_EVP = de.Domain([z_basis], comm=MPI.COMM_SELF)
+
 '''
-notation: W = delta_rhog/rhog = delta_ln_rhog, Q=delta_eps/eps = delta_ln_eps, U = velocities 
+the linear problem 
+
+W = delta_rhog/rhog = delta_ln_rhog, Q=delta_eps/eps = delta_ln_eps, U = velocities 
 W_p = W_primed (dW/dz)...etc
 '''
 
-
-if (viscosity == True) and (diffusion == True):#full problem: include viscosity and particle diffusion
+if (viscosity_pert == True) and (diffusion == True):#full problem: include viscosity and particle diffusion
     waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
 
-if (viscosity == True) and (diffusion == False):#include viscosity but no particle diffusion
+if (viscosity_pert == True) and (diffusion == False):#include viscosity but no particle diffusion
     waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma')
     
-if (viscosity == False) and (diffusion == True):#ignore gas viscosity but include particle diffusion 
+if (viscosity_pert == False) and (diffusion == True):#ignore gas viscosity but include particle diffusion 
     waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
     
-if (viscosity == False) and (diffusion == False):#ignore gas viscosity and ignore diffusion  
+if (viscosity_pert == False) and (diffusion == False):#ignore gas viscosity and ignore diffusion  
     waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma')
 
-    
+
 '''
-set up required vertical profiles in epsilon, rhog, rhod, and vdz
+constant parameters
+'''
+waves.parameters['delta']      = delta
+waves.parameters['alpha']      = alpha
+waves.parameters['inv_stokes'] = 1.0/stokes 
+waves.parameters['kx']         = kx
+
+'''
+non-constant coefficients I: epsilon, rhod, rhog, vdz 
 '''
 
-ln_rhog0  = domain_EVP.new_field()
-dln_rhog0 = domain_EVP.new_field()
+z = domain_EVP.grid(0)
+
+dln_rhog0  = domain_EVP.new_field()
 d2ln_rhog0 = domain_EVP.new_field()
 
-ln_rhod0  = domain_EVP.new_field()
-dln_rhod0 = domain_EVP.new_field()
+dln_rhod0  = domain_EVP.new_field()
 
 epsilon0   = domain_EVP.new_field()
 depsilon0  = domain_EVP.new_field()
 d2epsilon0 = domain_EVP.new_field()
 
-ln_epsilon0 = domain_EVP.new_field()
 dln_epsilon0= domain_EVP.new_field()
 
 vdz0        = domain_EVP.new_field()
 dvdz0       = domain_EVP.new_field()
 
-inv_stokes0     = domain_EVP.new_field()
+dln_rhog0['g']    = dln_rhog(z)
+d2ln_rhog0['g']   = d2ln_rhog(z)
 
-scale = nz_vert/nz_waves
+dln_rhod0['g']    = dln_rhod(z)
 
-ln_rhog0.set_scales(scale)
-dln_rhog0.set_scales(scale)
-d2ln_rhog0.set_scales(scale)
+epsilon0['g']     = epsilon(z)
+depsilon0['g']    = depsilon(z)
+d2epsilon0['g']   = d2epsilon(z)
 
-ln_rhod0.set_scales(scale)
-dln_rhod0.set_scales(scale)
+dln_epsilon0['g'] = dln_epsilon(z) 
 
-epsilon0.set_scales(scale)
-depsilon0.set_scales(scale)
-d2epsilon0.set_scales(scale)
+vdz0['g']         = vdz(z)
+dvdz0['g']        = dvdz(z)
 
-ln_epsilon0.set_scales(scale)
-dln_epsilon0.set_scales(scale)
+waves.parameters['dln_rhog0']      = dln_rhog0
+waves.parameters['d2ln_rhog0']     = d2ln_rhog0
 
-vdz0.set_scales(scale)
-dvdz0.set_scales(scale)
+waves.parameters['dln_rhod0']      = dln_rhod0
 
-inv_stokes0.set_scales(scale)
+waves.parameters['epsilon0']      = epsilon0
+waves.parameters['depsilon0']     = depsilon0
+waves.parameters['d2epsilon0']    = d2epsilon0
 
-ln_rhog0['g'] = ln_rhog
-ln_rhog0.differentiate('z', out=dln_rhog0)
-dln_rhog0.differentiate('z', out=d2ln_rhog0)
+waves.parameters['dln_epsilon0']  = dln_epsilon0
 
-ln_rhod0['g'] = ln_epsilon + ln_rhog
-ln_rhod0.differentiate('z', out=dln_rhod0)
-
-epsilon0['g'] = np.exp(ln_epsilon)
-epsilon0.differentiate('z', out=depsilon0)
-depsilon0.differentiate('z', out=d2epsilon0)
-
-ln_epsilon0['g'] = ln_epsilon
-ln_epsilon0.differentiate('z', out=dln_epsilon0)
-
-vdz0['g'] = vdz
-vdz0.differentiate('z',out=dvdz0)
-
-inv_stokes0['g'] = 1.0/stokes
-
-ln_rhog0.set_scales(1, keep_data=True)
-dln_rhog0.set_scales(1, keep_data=True)
-d2ln_rhog0.set_scales(1, keep_data=True)
-
-ln_rhod0.set_scales(1, keep_data=True)
-dln_rhod0.set_scales(1, keep_data=True)
-
-epsilon0.set_scales(1, keep_data=True)
-depsilon0.set_scales(1, keep_data=True)
-d2epsilon0.set_scales(1, keep_data=True)
-
-ln_epsilon0.set_scales(1, keep_data=True)
-dln_epsilon0.set_scales(1, keep_data=True)
-
-vdz0.set_scales(1, keep_data=True)
-dvdz0.set_scales(1, keep_data=True)
-
-inv_stokes0.set_scales(1,keep_data=True)
+waves.parameters['vdz0']           = vdz0
+waves.parameters['dvdz0']          = dvdz0
 
 '''
-set up required vertical profiles in vgx, vgy, vdx, vdy
+non-constant coefficients II: vgx, vgy, vdx, vdy
 '''
 vgx0  = domain_EVP.new_field()
 dvgx0 = domain_EVP.new_field()
@@ -206,7 +117,7 @@ dvdx0 = domain_EVP.new_field()
 vdy0  = domain_EVP.new_field()
 dvdy0 = domain_EVP.new_field()
 
-scale = nz_horiz/nz_waves
+scale = nz_vert/nz_waves
 
 vgx0.set_scales(scale)
 dvgx0.set_scales(scale)
@@ -250,37 +161,11 @@ dvdx0.set_scales(1, keep_data=True)
 vdy0.set_scales(1, keep_data=True)
 dvdy0.set_scales(1, keep_data=True)
 
-'''
-constant parameters
-'''
-waves.parameters['delta0']      = delta0
-waves.parameters['alpha0']      = alpha0
-waves.parameters['cs']          = cs
-waves.parameters['Hgas']        = Hgas
-waves.parameters['Omega']       = Omega
-
-waves.parameters['kx']          = kx
-
-'''
-non-constant coefficients
-'''
-waves.parameters['epsilon0']      = epsilon0
-waves.parameters['depsilon0']     = depsilon0
-waves.parameters['dln_epsilon0']  = dln_epsilon0
-waves.parameters['d2epsilon0']    = d2epsilon0
-
-waves.parameters['dln_rhog0']      = dln_rhog0
-waves.parameters['d2ln_rhog0']     = d2ln_rhog0
-waves.parameters['dln_rhod0']      = dln_rhod0
-
 waves.parameters['vdx0']             = vdx0
 waves.parameters['dvdx0']            = dvdx0
 
 waves.parameters['vdy0']             = vdy0
 waves.parameters['dvdy0']            = dvdy0
-
-waves.parameters['vdz0']           = vdz0
-waves.parameters['dvdz0']          = dvdz0
 
 waves.parameters['vgx0']              = vgx0
 waves.parameters['dvgx0']             = dvgx0
@@ -289,8 +174,6 @@ waves.parameters['d2vgx0']            = d2vgx0
 waves.parameters['vgy0']              = vgy0
 waves.parameters['dvgy0']             = dvgy0
 waves.parameters['d2vgy0']            = d2vgy0
-
-waves.parameters['inv_stokes0']    = inv_stokes0
 
 
 # W is (delta_rhog)/rhog, Q is (delta_epsilon)/epsilon  
@@ -305,61 +188,57 @@ if diffusion == True:
 if diffusion == False:
     waves.substitutions['delta_ln_rhod_p'] = "dz(Q) + dz(W)"
     
-if fixedSt == True:
-    waves.substitutions['delta_ln_taus'] = "0"
-else:
-    waves.substitutions['delta_ln_taus'] = "-W"
+waves.substitutions['delta_ln_taus'] = "0"
 
 #dust continuity equation
 waves.substitutions['dust_mass_LHS']="sigma*delta_ln_rhod + ikx*(Udx + vdx0*delta_ln_rhod) + dln_rhod0*(Udz + vdz0*delta_ln_rhod) + vdz0*delta_ln_rhod_p + dvdz0*delta_ln_rhod + dz(Udz)"
 if diffusion == True:
-    waves.substitutions['dust_mass_RHS']="delta0*cs*Hgas*(dln_epsilon0*(dln_rhog0*W + dz(W)) + d2epsilon0*W/epsilon0 - kx*kx*Q + dln_rhog0*delta_eps_p_over_eps + delta_eps_pp_over_eps)"
+    waves.substitutions['dust_mass_RHS']="delta*(dln_epsilon0*(dln_rhog0*W + dz(W)) + d2epsilon0*W/epsilon0 - kx*kx*Q + dln_rhog0*delta_eps_p_over_eps + delta_eps_pp_over_eps)"
 if diffusion == False:
     waves.substitutions['dust_mass_RHS']="0"
 
 #dust x-mom equation
 waves.substitutions['dust_xmom_LHS']="sigma*Udx + dvdx0*Udz + ikx*vdx0*Udx + vdz0*dz(Udx)"
-waves.substitutions['dust_xmom_RHS']="2*Omega*Udy + inv_stokes0*delta_ln_taus*(vdx0 - vgx0) - inv_stokes0*(Udx - Ugx)"
+waves.substitutions['dust_xmom_RHS']="2*Udy + inv_stokes*delta_ln_taus*(vdx0 - vgx0) - inv_stokes*(Udx - Ugx)"
 
 #dust y-mom equation
 waves.substitutions['dust_ymom_LHS']="sigma*Udy + dvdy0*Udz + ikx*vdx0*Udy + vdz0*dz(Udy)"
-waves.substitutions['dust_ymom_RHS']="-0.5*Omega*Udx + inv_stokes0*delta_ln_taus*(vdy0 - vgy0) - inv_stokes0*(Udy - Ugy)"
+waves.substitutions['dust_ymom_RHS']="-0.5*Udx + inv_stokes*delta_ln_taus*(vdy0 - vgy0) - inv_stokes*(Udy - Ugy)"
 
 #dust z-mom
 waves.substitutions['dust_zmom_LHS']="sigma*Udz + dvdz0*Udz + ikx*vdx0*Udz + vdz0*dz(Udz)"
-waves.substitutions['dust_zmom_RHS']="inv_stokes0*delta_ln_taus*vdz0 - inv_stokes0*(Udz - Ugz)"
+waves.substitutions['dust_zmom_RHS']="inv_stokes*delta_ln_taus*vdz0 - inv_stokes*(Udz - Ugz)"
 
 #gas continuity equation
 waves.substitutions['gas_mass_LHS']="sigma*W + ikx*(Ugx + vgx0*W) + dln_rhog0*Ugz + dz(Ugz)"
 
 #linearized viscous forces on gas
 #could also use eqm eqns to replace first bracket, so that we don't need to take numerical derivs of vgx..etc
-if viscosity == True:
+if viscosity_pert == True:
     waves.substitutions['delta_vgz_pp']="-( sigma*dz(W) + ikx*(Ugx_p + dvgx0*W + vgx0*dz(W)) + d2ln_rhog0*Ugz + dln_rhog0*dz(Ugz) )" #take deriv of gas mass eq to get d2(delta_vgz)/dz2
-    waves.substitutions['delta_Fvisc_x'] = "alpha0*cs*Hgas*(ikx*dz(Ugz)/3 - 4*kx*kx*Ugx/3 + dln_rhog0*(ikx*Ugz + Ugx_p) + dz(Ugx_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgx0 + d2vgx0)*W"
-    waves.substitutions['delta_Fvisc_y'] = "alpha0*cs*Hgas*(dln_rhog0*Ugy_p - kx*kx*Ugy + dz(Ugy_p)) - alpha0*cs*Hgas*(dln_rhog0*dvgy0 + d2vgy0)*W"
-    waves.substitutions['delta_Fvisc_z'] = "alpha0*cs*Hgas*(ikx*Ugx_p/3 - kx*kx*Ugz + dln_rhog0*(4*dz(Ugz)/3 - 2*ikx*Ugx/3) + 4*delta_vgz_pp/3)"
-if viscosity == False:
+    waves.substitutions['delta_Fvisc_x'] = "alpha*(ikx*dz(Ugz)/3 - 4*kx*kx*Ugx/3 + dln_rhog0*(ikx*Ugz + Ugx_p) + dz(Ugx_p)) - alpha*(dln_rhog0*dvgx0 + d2vgx0)*W"
+    waves.substitutions['delta_Fvisc_y'] = "alpha*(dln_rhog0*Ugy_p - kx*kx*Ugy + dz(Ugy_p)) - alpha*(dln_rhog0*dvgy0 + d2vgy0)*W"
+    waves.substitutions['delta_Fvisc_z'] = "alpha*(ikx*Ugx_p/3 - kx*kx*Ugz + dln_rhog0*(4*dz(Ugz)/3 - 2*ikx*Ugx/3) + 4*delta_vgz_pp/3)"
+if viscosity_pert == False:
     waves.substitutions['delta_Fvisc_x'] = "0"
     waves.substitutions['delta_Fvisc_y'] = "0"
     waves.substitutions['delta_Fvisc_z'] = "0"
     
 #linearized back-reaction force on gas
 if backreaction == True:
-    waves.substitutions['delta_backreaction_x']="inv_stokes0*epsilon0*( (vgx0 - vdx0)*(delta_ln_taus - Q) - (Ugx - Udx) )"
-    waves.substitutions['delta_backreaction_y']="inv_stokes0*epsilon0*( (vgy0 - vdy0)*(delta_ln_taus - Q) - (Ugy - Udy) )"
-    waves.substitutions['delta_backreaction_z']="inv_stokes0*epsilon0*( (     - vdz0)*(delta_ln_taus - Q) - (Ugz - Udz) )"
+    waves.substitutions['delta_backreaction_x']="inv_stokes*epsilon0*( (vgx0 - vdx0)*(delta_ln_taus - Q) - (Ugx - Udx) )"
+    waves.substitutions['delta_backreaction_y']="inv_stokes*epsilon0*( (vgy0 - vdy0)*(delta_ln_taus - Q) - (Ugy - Udy) )"
+    waves.substitutions['delta_backreaction_z']="inv_stokes*epsilon0*( (     - vdz0)*(delta_ln_taus - Q) - (Ugz - Udz) )"
 if backreaction == False:
     waves.substitutions['delta_backreaction_x']="0"
     waves.substitutions['delta_backreaction_y']="0"
     waves.substitutions['delta_backreaction_z']="0"
-
     
 #gas equations
 waves.add_equation("gas_mass_LHS = 0 ")
-waves.add_equation("sigma*Ugx + dvgx0*Ugz + ikx*vgx0*Ugx - 2*Omega*Ugy + ikx*cs*cs*W - delta_backreaction_x - delta_Fvisc_x = 0")
-waves.add_equation("sigma*Ugy + dvgy0*Ugz + ikx*vgx0*Ugy + 0.5*Omega*Ugx - delta_backreaction_y - delta_Fvisc_y = 0")
-waves.add_equation("sigma*Ugz + ikx*vgx0*Ugz + cs*cs*dz(W) - delta_backreaction_z - delta_Fvisc_z = 0")
+waves.add_equation("sigma*Ugx + dvgx0*Ugz + ikx*vgx0*Ugx - 2*Ugy + ikx*W - delta_backreaction_x - delta_Fvisc_x = 0")
+waves.add_equation("sigma*Ugy + dvgy0*Ugz + ikx*vgx0*Ugy + 0.5*Ugx - delta_backreaction_y - delta_Fvisc_y = 0")
+waves.add_equation("sigma*Ugz + ikx*vgx0*Ugz + dz(W) - delta_backreaction_z - delta_Fvisc_z = 0")
 
 #dust equations 
 waves.add_equation("dust_mass_LHS - dust_mass_RHS = 0 ")
@@ -371,7 +250,7 @@ waves.add_equation("dust_zmom_LHS - dust_zmom_RHS = 0")
 #in our formulation of second derivs of [epsilon, delta_vgx, delta_vgy] appear for full problem with viscosity
 if diffusion == True:
     waves.add_equation("dz(Q) - Q_p = 0")
-if viscosity == True:
+if viscosity_pert == True:
     waves.add_equation("dz(Ugx) - Ugx_p = 0")
     waves.add_equation("dz(Ugy) - Ugy_p = 0")
 
@@ -379,23 +258,33 @@ if viscosity == True:
 boundary conditions (reflection)
 '''
 waves.add_bc('left(dz(W))=0')
-# waves.add_bc('left(Ugz)=0')
-# waves.add_bc('left(dz(Udx))=0')
-# waves.add_bc('left(dz(Udy))=0')
-# waves.add_bc('left(Udz)=0')
-# waves.add_bc('right(Ugz)=0')
+'''
+waves.add_bc('left(Ugz)=0')
+waves.add_bc('left(dz(Udx))=0')
+waves.add_bc('left(dz(Udy))=0')
+waves.add_bc('left(Udz)=0')
+waves.add_bc('right(Ugz)=0')
+'''
 
+'''
 waves.add_bc('left(dz(Ugx - epsilon0*vgx0*Q/(1+epsilon0) + epsilon0*Udx + epsilon0*vdx0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilon0*vdy0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(Ugz + epsilon0*Udz)=0')
-#waves.add_bc('right(dz(W))=0')
-waves.add_bc('right(Q)=0')
+waves.add_bc('right(dW)=0')
 waves.add_bc('right(Ugz + epsilon0*Udz + epsilon0*vdz0*Q/(1+epsilon0))=0')
+'''
+
+#same as above but with Q=0 instead of dW=0 at zmax 
+waves.add_bc('left(dz(Ugx - epsilon0*vgx0*Q/(1+epsilon0) + epsilon0*Udx + epsilon0*vdx0*Q/(1+epsilon0)))=0')
+waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilon0*vdy0*Q/(1+epsilon0)))=0')
+waves.add_bc('left(Ugz + epsilon0*Udz)=0')
+waves.add_bc('right(Q)=0')
+waves.add_bc('right(Ugz + epsilon0*Udz)=0')
 
 if diffusion == True:
     waves.add_bc('left(Q_p)=0')
 
-if viscosity == True:
+if viscosity_pert == True:
     waves.add_bc('left(Ugx_p)=0')
     waves.add_bc('left(Ugy_p)=0')
     waves.add_bc('right(Ugx_p)=0')
@@ -438,7 +327,7 @@ freq   = -np.imag(sigma) #define  s= s_r - i*omega
 abs_sig = np.abs(sigma)
 
 
-growth_acceptable = abs_sig < Omega
+growth_acceptable = abs_sig < 1.0
 sigma = sigma[growth_acceptable]
 
 growth =  np.real(sigma)
@@ -455,7 +344,7 @@ g1=np.argmax(growth)
 print(g1)
 print(sigma[g1])
 
-N_actual = np.power(kx*freq[g1]*Hgas/Omega,2.0)
+N_actual = np.power(kx*freq[g1],2.0)
 print(N_actual)
 
 #g1 = (EP.evalues_good_index[g1])
