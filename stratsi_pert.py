@@ -339,6 +339,8 @@ N = 6 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omeg
 #g1 = np.argmin(np.abs(freq))
 #g1=np.argmin(np.abs(sigma))
 
+#g1 = np.argmin(np.abs(1.66193285e-3- growth))
+
 g1=np.argmax(growth)
 
 print(g1)
