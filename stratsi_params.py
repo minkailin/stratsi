@@ -50,7 +50,7 @@ nz_vert = 256
 mode parameters
 '''
 kx       = 400.0
-nz_waves = 128
+nz_waves = 64
     
 '''
 physics options 
@@ -65,7 +65,6 @@ backreaction  = True
 analytic vertical profiles for d/g, vdz, rhog assuming constant stokes number 
 '''
 def epsilon(z):
-    print("dg0=",dg0)
     return dg0*np.exp(-0.5*beta*z*z/delta)
 
 def rhog(z):

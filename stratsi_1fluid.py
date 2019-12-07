@@ -11,6 +11,8 @@ from mpi4py import MPI
 import matplotlib.pyplot as plt
 from dedalus import public as de
 import time
+from scipy.integrate import quad
+from scipy.optimize import broyden1
 
 import logging
 logger = logging.getLogger(__name__)
@@ -37,25 +39,30 @@ parameters for eigenvalue problem
 kx normalized by 1/Hgas
 '''
 
-kx = 800.0
+kx     = 400.0
+kx_min = 400.0
+kx_max = 800.0 
+nkx    = 2
 
 '''
 physics options 
 can choose to include/exclude particle diffusion, 
 '''
+fix_metal    = True
 diffusion    = True
 tstop        = True
 
 '''
 problem parameters
 '''
-alpha0    = 1e-8
-st0       = 1e-3
-dg0       = 3.0
-eta_hat   = 0.0
+alpha0    = 1e-6
+st0       = 1e-2
+dg0       = 2.0
+metal     = 0.02
+eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.02
+zmax      = 0.08
 nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
@@ -140,6 +147,38 @@ def dvy_eqm(z):
     eps = epsilon_eqm(z)
     deps = depsilon_eqm(z) 
     return eta_hat*cs*deps/(1.0+eps)/(1.0+eps)
+
+def integrand_rhog(z, dg):
+    temp = z*z/2.0 - (Diff*dg/(Omega*Omega*tau_s))*(np.exp(-0.5*Omega*Omega*z*z*tau_s/Diff) - 1.0)
+    return np.exp(-Omega*Omega*temp/cs/cs)
+
+def integrand_rhod(z, dg):
+    rhog = integrand_rhog(z, dg)
+    eps  = dg*np.exp(-0.5*tau_s*Omega*Omega*z*z/Diff)
+    return eps*rhog
+
+def sigma_g(dg):
+    I = quad(integrand_rhog, 0.0, np.inf, args=(dg))
+    return I[0]
+
+def sigma_d(dg):
+    I = quad(integrand_rhod, 0.0, np.inf, args=(dg))    
+    return I[0]
+
+def metallicity_error(dg):
+    sigg = sigma_g(dg)
+    sigd = sigma_d(dg)
+    Z = sigd/sigg
+    return Z - metal
+
+def get_dg0_from_metal():
+    Hd      = np.sqrt(delta0/(st0 + delta0))
+    dgguess = metal/Hd
+    sol     = broyden1(metallicity_error,[dgguess], f_tol=1e-16)
+    return sol[0]
+
+if fix_metal == True:
+    dg0 = get_dg0_from_metal()
 
 '''
 setup domain and calculate derivatives of vertical profiles as needed 
@@ -367,204 +406,94 @@ if (diffusion == True) and (tstop == False):
     waves.add_bc('left(Uz)=0')
     waves.add_bc('right(Uz) = 0')
 
-    
+
+'''
+eigenvalue problem, sweep through kx space
+for each kx, filter modes and keep most unstable one
+'''
+
 EP = Eigenproblem(waves)
-EP.EVP.namespace['kx'].value = kx
-EP.EVP.parameters['kx'] = kx
-EP.solve()
-EP.reject_spurious()
-sigma = EP.evalues_good
+kx_space = np.logspace(np.log10(kx_min),np.log10(kx_max), num=nkx)
 
+eigenfreq = []
+eigenfunc = {'W':[], 'Q':[], 'Ux':[], 'Uy':[], 'Uz':[]}
 
+for i, kx in enumerate(kx_space):
+    EP.EVP.namespace['kx'].value = kx
+    EP.EVP.parameters['kx'] = kx
+    EP.solve()
+    EP.reject_spurious()
 
-print(sigma)
-#sys.exit()
+    abs_sig = np.abs(EP.evalues_good)
+    sig_acceptable = abs_sig < Omega
 
-# Solver
-# solver = waves.build_solver()
-# t1 = time.time()
-# solver.solve_dense(solver.pencils[0])
-# t2 = time.time()
-# logger.info('Elapsed solve time: %f' %(t2-t1))
-# sigma = solver.eigenvalues
-# print(sigma)
-# solver.set_state(g1)
-# Uz = solver.state['Uz']
-# print(Uz['g'])
-#sys.exit()
+    if sig_acceptable.size > 0:
+        sigma      = EP.evalues_good[sig_acceptable]
+        sigma_index= EP.evalues_good_index[sig_acceptable]
+    
+        growth   =  np.real(sigma)
+        g1       =  np.argmax(growth)
+        opt_freq = sigma[g1]
+        
+        g2 = sigma_index[g1]
+        EP.solver.set_state(g2)
+        W  = EP.solver.state['W']
+        Q  = EP.solver.state['Q']
+        Ux = EP.solver.state['Ux']
+        Uy = EP.solver.state['Uy']
+        Uz = EP.solver.state['Uz']
+    else:
+        opt_freq = np.nan
+        W = [0.0]
+        Q = [0.0]
+        Ux= [0.0]
+        Uy= [0.0]
+        Uz= [0.0]
 
-growth =  np.real(sigma)
-freq   = -np.imag(sigma) #define  s= s_r - i*omega
-abs_sig = np.abs(sigma)
+    print("i, kx, sigma", i, kx, opt_freq)
 
-growth_acceptable = abs_sig < Omega
-sigma = sigma[growth_acceptable]
+    eigenfreq.append(opt_freq) #store eigenfreq
 
-growth =  np.real(sigma)
-freq   = -np.imag(sigma) #define  s= s_r - i*omega
+    eigenfunc['W'].append([])
+    eigenfunc['Q'].append([])
+    eigenfunc['Ux'].append([])
+    eigenfunc['Uy'].append([])
+    eigenfunc['Uz'].append([])
 
-N = 6 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
-#g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
-#g1 = np.argmin(np.abs(freq))
-#g1=np.argmin(np.abs(sigma))
-
-g1=np.argmax(growth)
-
-print(g1)
-print(sigma[g1])
-
-N_actual = np.power(kx*freq[g1]*Hgas/Omega,2.0)
-print(N_actual)
-
-#g1 = (EP.evalues_good_index[g1])
-g1 = np.argmin(np.abs(EP.evalues-sigma[g1]))
-
-
-EP.solver.set_state(g1)
-Uz = EP.solver.state['Uz']
-Q  = EP.solver.state['Q']
-W  = EP.solver.state['W']
+    eigenfunc['W'][i] = W['g']
+    eigenfunc['Q'][i] = Q['g']
+    eigenfunc['Ux'][i] = Ux['g']
+    eigenfunc['Uy'][i] = Uy['g']
+    eigenfunc['Uz'][i] = Uz['g']
+    
+#    eigenfunc['W'][i].append(np.copy(W['g']))
+#    eigenfunc['Q'][i].append(np.copy(Q['g']))
+#    eigenfunc['Ux'][i].append(np.copy(Ux['g']))
+#    eigenfunc['Uy'][i].append(np.copy(Uy['g']))
+#    eigenfunc['Uz'][i].append(np.copy(Uz['g']))
 
 '''
-#plotting parameters
+data output
 '''
-fontsize= 24
-nlev    = 128
-nclev   = 6
-cmap    = plt.cm.inferno
 
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+with h5py.File('stratsi_1fluid_modes.h5','w') as outfile:
+    
+    scale_group = outfile.create_group('scales')
+    scale_group.create_dataset('kx_space',data=kx_space)
+    scale_group.create_dataset('eig_freq',data=eigenfreq)
+    scale_group.create_dataset('z',   data=z)
+    
+    tasks_group = outfile.create_group('tasks')
 
-z    = domain_EVP.grid(0, scales=16)
-Uz.set_scales(scales=16)
-
-max_Uz = np.amax(np.abs(Uz['g']))
-#plt.plot(z, np.real(Uz['g'])/max_Uz, linewidth=2, label=r'real')
-#plt.plot(z, np.imag(Uz['g'])/max_Uz, linewidth=2, label=r'imaginary')
-
-Uz_norm = np.conj(Uz['g'][0])*Uz['g']
-plt.plot(z, np.real(Uz_norm)/np.amax(np.abs(Uz_norm)), linewidth=2, label=r'real')
-plt.plot(z, np.imag(Uz_norm)/np.amax(np.abs(Uz_norm)), linewidth=2, label=r'imaginary')
-
-#plt.plot(z, np.abs(Uz['g'])/max_Uz, linewidth=2, label=r'real')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta v_{z}/|\delta v_{z}|_{max}$', fontsize=fontsize)
-#plt.ylabel(r'$\delta v_{z}$', fontsize=fontsize)
-
-fname = 'stratsi_vz_1fluid'
-plt.savefig(fname,dpi=150)
-
-######################################################################################################
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-
-z    = domain_EVP.grid(0, scales=16)
-W.set_scales(scales=16)
-Wnorm = np.conj(W['g'][0])/np.power(np.abs(W['g'][0]),2)
-
-plt.plot(z, np.real(W['g']*Wnorm), linewidth=2, label=r'real')
-plt.plot(z, np.imag(W['g']*Wnorm), linewidth=2, label=r'imaginary')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta \rho_{g}/\rho_{g}$', fontsize=fontsize)
-
-fname = 'stratsi_W_1fluid'
-plt.savefig(fname,dpi=150)
-
-######################################################################################################
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-
-z    = domain_EVP.grid(0, scales=16)
-Q.set_scales(scales=16)
-Qmax = np.amax(np.abs(Q['g']))
-#Qnorm = np.conj(Q['g'][0])/np.power(np.abs(Q['g'][0]),2)
-
-plt.plot(z, np.real(Q['g'])/Qmax, linewidth=2, label=r'real')
-plt.plot(z, np.imag(Q['g'])/Qmax, linewidth=2, label=r'imaginary')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta \epsilon/\epsilon$', fontsize=fontsize)
-
-fname = 'stratsi_Q_1fluid'
-plt.savefig(fname,dpi=150)
-
-######################################################################################################
+    for i, kx in enumerate(kx_space):
+        data_group = tasks_group.create_group('k_{:03d}'.format(i))
+        data_group.create_dataset('eig_W',data=eigenfunc['W'][i])
+        data_group.create_dataset('eig_Q',data=eigenfunc['Q'][i])
+        data_group.create_dataset('eig_Ux',data=eigenfunc['Ux'][i])
+        data_group.create_dataset('eig_Uy',data=eigenfunc['Uy'][i])
+        data_group.create_dataset('eig_Uz',data=eigenfunc['Uz'][i])
+    outfile.close()
 
 
 
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
-z    = domain_EVP.grid(0, scales=16)
-epsilon0.set_scales(scales=16)
-plt.plot(z, np.real(epsilon0['g']),linewidth=2, label='numerical solution')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel('$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\epsilon$',fontsize=fontsize)
-
-fname = 'stratsi_epsilon_1fluid'
-plt.savefig(fname,dpi=150)
-
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-
-z    = domain_EVP.grid(0, scales=16)
-vz0.set_scales(scales=16)
-vy0.set_scales(scales=16)
-
-plt.plot(z, np.real(vz0['g']),linewidth=2, label=r'$v_z/c_s$')
-plt.plot(z, np.real(vy0['g']),linewidth=2, label=r'$v_y/c_s$')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel('$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'velocities',fontsize=fontsize)
-
-fname = 'stratsi_vzy_1fluid'
-plt.savefig(fname,dpi=150)
