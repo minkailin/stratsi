@@ -6,6 +6,12 @@ from stratsi_params import *
 from eigenproblem import Eigenproblem
 
 '''
+output control
+'''
+nz_out   = 1024
+out_scale= nz_out/nz_waves
+
+'''
 read in background vertical profiles of vgx, vgy, vdx, vdy
 '''
 
@@ -291,268 +297,126 @@ if viscosity_pert == True:
     waves.add_bc('right(Ugy_p)=0')
 
 
+
+'''
+eigenvalue problem, sweep through kx space
+for each kx, filter modes and keep most unstable one
+'''
+
 EP = Eigenproblem(waves)
-EP.EVP.namespace['kx'].value = kx
-EP.EVP.parameters['kx'] = kx
-EP.solve()
-EP.reject_spurious()
-sigma = EP.evalues_good
+kx_space = np.logspace(np.log10(kx_min),np.log10(kx_max), num=nkx)
 
+eigenfreq = []
+eigenfunc = {'W':[], 'Q':[], 'Ugx':[], 'Ugy':[], 'Ugz':[], 'Udx':[], 'Udy':[], 'Udz':[]}
 
-print(sigma)
-
-# Solver
-# solver = waves.build_solver()
-# t1 = time.time()
-# solver.solve_dense(solver.pencils[0])
-# t2 = time.time()
-# logger.info('Elapsed solve time: %f' %(t2-t1))
-
-# Filter infinite/nan eigenmodes
-#finite = np.isfinite(solver.eigenvalues)
-
-#sigma   = solver.eigenvalues
-#growth  = np.real(sigma)
-#abs_sig = np.abs(sigma) 
-##growth_acceptable = growth[np.logical_and(growth > 0.0, growth < 1.0)]
-##growth_acceptable = np.logical_and(growth > 0.0, abs_sig < 1.0)
-#growth_acceptable = abs_sig < Omega
-
-#solver.eigenvalues = solver.eigenvalues[growth_acceptable]
-#solver.eigenvectors = solver.eigenvectors[:, growth_acceptable]
-#sigma  = solver.eigenvalues
-
-growth =  np.real(sigma)
-freq   = -np.imag(sigma) #define  s= s_r - i*omega
-abs_sig = np.abs(sigma)
-
-
-growth_acceptable = abs_sig < 1.0
-sigma = sigma[growth_acceptable]
-
-growth =  np.real(sigma)
-freq   = -np.imag(sigma)
-
-
-N = 6 #for low freq modes, (kx*omega)^2 should be an integer (kx norm by H, omega norm by Omega)
-#g1 = np.argmin(np.abs(np.power(kx*freq,2.0) - N))
-#g1 = np.argmin(np.abs(freq))
-#g1=np.argmin(np.abs(sigma))
-
-#g1 = np.argmin(np.abs(1.66193285e-3- growth))
-
-g1=np.argmax(growth)
-
-print(g1)
-print(sigma[g1])
-
-N_actual = np.power(kx*freq[g1],2.0)
-print(N_actual)
-
-#g1 = (EP.evalues_good_index[g1])
-g1 = np.argmin(np.abs(EP.evalues-sigma[g1]))
-
-
-EP.solver.set_state(g1)
-W = EP.solver.state['W']
-Q = EP.solver.state['Q']
-Ugz = EP.solver.state['Ugz']
-Udz = EP.solver.state['Udz']
-
-# solver.set_state(g1)
-# W = solver.state['W']
-# Ugz = solver.state['Ugz']
-
-
-
-'''
-#plotting parameters
-'''
-fontsize= 24
-nlev    = 128
-nclev   = 6
-cmap    = plt.cm.inferno
-
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-
-z    = domain_EVP.grid(0, scales=16)
-Udz.set_scales(scales=16)
-max_Udz = np.amax(np.abs(Udz['g']))
-Udz_norm = np.conj(Udz['g'][0])*Udz['g']#/max_Udz/max_Udz #np.power(np.abs(Udz['g'][0]),2)
-
-#plt.ylim(0,1)
-#plt.xlim(zmin,zmax)
-
-plt.plot(z, np.real(Udz_norm)/np.amax(np.abs(Udz_norm)), linewidth=2, label=r'real')
-plt.plot(z, np.imag(Udz_norm)/np.amax(np.abs(Udz_norm)), linewidth=2, label=r'imaginary')
-
-#plt.plot(z, np.abs(Udz['g'])/max_Udz, linewidth=2, label=r'absolute')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-#plt.ylabel(r'$\delta\rho_g/\rho_g$', fontsize=fontsize)
-#plt.ylabel(r'$\delta v_{gz}/c_s$', fontsize=fontsize)
-plt.ylabel(r'$\delta v_{dz}/|\delta v_{dz}|_{max}$', fontsize=fontsize)
-#plt.ylabel(r'$\delta v_{dz}$', fontsize=fontsize)
-
-fname = 'stratsi_vdz'
-plt.savefig(fname,dpi=150)
-
-######################################################################################################
-
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-
-z    = domain_EVP.grid(0, scales=16)
-Ugz.set_scales(scales=16)
-max_Ugz = np.amax(np.abs(Ugz['g']))
-
-Ugz_norm = np.conj(Ugz['g'][0])/max_Ugz/max_Ugz
-
-plt.plot(z, np.real(Ugz['g']*Ugz_norm), linewidth=2, label=r'real')
-plt.plot(z, np.imag(Ugz['g']*Ugz_norm), linewidth=2, label=r'imaginary')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta v_{gz}/|\delta v_{gz}|_{max}$', fontsize=fontsize)
-
-fname = 'stratsi_vgz'
-plt.savefig(fname,dpi=150)
-
-######################################################################################################
-
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-
-z    = domain_EVP.grid(0, scales=16)
-Q.set_scales(scales=16)
-Qmax = np.amax(np.abs(Q['g']))
-#Wnorm = np.conj(W['g'][0])/np.power(np.abs(W['g'][0]),2)
-
-plt.plot(z, np.real(Q['g'])/Qmax, linewidth=2, label=r'real')
-plt.plot(z, np.imag(Q['g'])/Qmax, linewidth=2, label=r'imaginary')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta \epsilon/\epsilon$', fontsize=fontsize)
-
-fname = 'stratsi_Q'
-plt.savefig(fname,dpi=150)
-
-
-
-'''
-
-# value at top of atmosphere in isothermal layer
-brunt_max = np.max(np.sqrt(np.abs(brunt2))) # max value in atmosphere
-k_Hρ = -1/2*del_ln_rho0['g'][0].real
-c_s = np.sqrt(T0['g'][0].real)
-
-logger.info("max Brunt is |N| = {} and  k_Hρ is {}".format(brunt_max, k_Hρ))
-start_time = time.time()
-EP = Eigenproblem(waves)
-ks = np.logspace(-1,2, num=20)*k_Hρ
-
-freqs = []
-eigenfunctions = {'w':[], 'u':[], 'T':[]}
-omega = {'ω_plus_min':[], 'ω_minus_max':[]}
-w_weights = []
-KE = domain_EVP.new_field()
-rho0 = domain_EVP.new_field()
-rho0['g'] = np.exp(ln_rho0['g'])
-rho0_avg = (rho0.integrate('z')['g'][0]/Lz).real
-logger.debug("aveage ρ0 = {:g}".format(rho0_avg))
-fig, ax = plt.subplots()
-for i, k in enumerate(ks):
-    ω_lamb2 = k**2*c_s2
-    ω_plus2 = ω_lamb2 + ω_ac2
-    ω_minus2  = brunt2*ω_lamb2/(ω_lamb2 + ω_ac2)
-    omega['ω_plus_min'].append(np.min(np.sqrt(ω_plus2)))
-    omega['ω_minus_max'].append(np.max(np.sqrt(ω_minus2)))
-    EP.EVP.namespace['k'].value = k
-    EP.EVP.parameters['k'] = k
+for i, kx in enumerate(kx_space):
+    EP.EVP.namespace['kx'].value = kx
+    EP.EVP.parameters['kx'] = kx
     EP.solve()
     EP.reject_spurious()
-    ω = EP.evalues_good
-    ax.plot([k]*len(ω), np.abs(ω.real)/brunt_max, marker='x', linestyle='none')
-    freqs.append(ω)
-    eigenfunctions['w'].append([])
-    eigenfunctions['u'].append([])
-    eigenfunctions['T'].append([])
-    w_weights.append([])
-    logger.info("k={:g} ; {:d} good eigenvalues among {:d} fields ({:g}%)".format(k, EP.evalues_good_index.shape[0], n_var, EP.evalues_good_index.shape[0]/(n_var*nz_waves)*100))
-    for ikk, ik in enumerate(EP.evalues_good_index):
-        EP.solver.set_state(ik)
-        w = EP.solver.state['w']
-        u = EP.solver.state['u']
-        T = EP.solver.state['T1']
 
-        i_max = np.argmax(np.abs(w['g']))
-        phase_correction = w['g'][i_max]
-        w['g'] /= phase_correction
-        u['g'] /= phase_correction
-        T['g'] /= phase_correction
+    abs_sig = np.abs(EP.evalues_good)
+    sig_acceptable = abs_sig < 1.0
 
-        KE['g'] = 0.5*rho0['g']*(u['g']*np.conj(u['g'])+w['g']*np.conj(w['g'])).real
-        KE_avg = (KE.integrate('z')['g'][0]/Lz).real
-        weight = np.sqrt(KE_avg/(0.5*rho0_avg))
+    sigma      = EP.evalues_good[sig_acceptable]
+    sigma_index= EP.evalues_good_index[sig_acceptable]
+        
+    if sigma.size > 0:
+        growth   =  np.real(sigma)
+        g1       =  np.argmax(growth)
+        opt_freq = sigma[g1]
+        
+        g2 = sigma_index[g1]
+        EP.solver.set_state(g2)
+        W  = EP.solver.state['W']
+        Q  = EP.solver.state['Q']
+        Ugx = EP.solver.state['Ugx']
+        Ugy = EP.solver.state['Ugy']
+        Ugz = EP.solver.state['Ugz']
+        Udx = EP.solver.state['Udx']
+        Udy = EP.solver.state['Udy']
+        Udz = EP.solver.state['Udz']
 
-        eigenfunctions['w'][i].append(np.copy(w['g'])/weight)
-        eigenfunctions['u'][i].append(np.copy(u['g'])/weight)
-        eigenfunctions['T'][i].append(np.copy(T['g'])/weight)
+        W.set_scales(scales=out_scale)
+        Q.set_scales(scales=out_scale)
+        Ugx.set_scales(scales=out_scale)
+        Ugy.set_scales(scales=out_scale)
+        Ugz.set_scales(scales=out_scale)
+        Udx.set_scales(scales=out_scale)
+        Udy.set_scales(scales=out_scale)
+        Udz.set_scales(scales=out_scale)
 
+        Wout = W['g']
+        Qout = Q['g']
+        Ugxout = Ugx['g']
+        Ugyout = Ugy['g']
+        Ugzout = Ugz['g']
+        Udxout = Udx['g']
+        Udyout = Udy['g']
+        Udzout = Udz['g']
+        
+    else:
+        opt_freq = np.nan
+        Wout   = np.zeros(nz_out)
+        Qout   =  np.zeros(nz_out)
+        Ugxout = np.zeros(nz_out)
+        Ugyout = np.zeros(nz_out)
+        Ugzout = np.zeros(nz_out)
+        Udxout = np.zeros(nz_out)
+        Udyout = np.zeros(nz_out)
+        Udzout = np.zeros(nz_out)
+        
+    eigenfreq.append(opt_freq) #store eigenfreq
 
-ax.set_xscale('log')
-end_time = time.time()
-logger.info("time to solve all modes: {:g} seconds".format(end_time-start_time))
+    eigenfunc['W'].append([])
+    eigenfunc['Q'].append([])
+    eigenfunc['Ugx'].append([])
+    eigenfunc['Ugy'].append([])
+    eigenfunc['Ugz'].append([])
+    eigenfunc['Udx'].append([])
+    eigenfunc['Udy'].append([])
+    eigenfunc['Udz'].append([])
+    
+    eigenfunc['W'][i] = np.copy(Wout)
+    eigenfunc['Q'][i] = np.copy(Qout)
+    eigenfunc['Ugx'][i] = np.copy(Ugxout)
+    eigenfunc['Ugy'][i] = np.copy(Ugyout)
+    eigenfunc['Ugz'][i] = np.copy(Ugzout)
+    eigenfunc['Udx'][i] = np.copy(Udxout)
+    eigenfunc['Udy'][i] = np.copy(Udyout)
+    eigenfunc['Udz'][i] = np.copy(Udzout)
+  
+'''
+print results to screen
+'''
+for i, kx in enumerate(kx_space):
+    print("i, kx, growth, freq = {0:3d} {1:1.2e} {2:9.6f} {3:9.6f}".format(i, kx, eigenfreq[i].real, -eigenfreq[i].imag))
 
+'''
+data output
+'''
 
-with h5py.File('wave_frequencies.h5','w') as outfile:
+with h5py.File('stratsi_modes.h5','w') as outfile:
+    z_out = domain_EVP.grid(0, scales=out_scale)
+
     scale_group = outfile.create_group('scales')
-
-    scale_group.create_dataset('grid',data=ks)
-    scale_group.create_dataset('brunt_max', data=brunt_max)
-    scale_group.create_dataset('k_Hρ',  data=k_Hρ)
-    scale_group.create_dataset('c_s',   data=c_s)
-    scale_group.create_dataset('z',   data=z)
-    scale_group.create_dataset('Lz',  data=Lz)
-    scale_group.create_dataset('rho0', data=rho0['g'])
+    scale_group.create_dataset('kx_space',data=kx_space)
+    scale_group.create_dataset('eig_freq',data=eigenfreq)
+    scale_group.create_dataset('z',   data=z_out)
+    scale_group.create_dataset('zmax', data=zmax)
 
     tasks_group = outfile.create_group('tasks')
 
-    for i, freq in enumerate(freqs):
+    for i, kx in enumerate(kx_space):
         data_group = tasks_group.create_group('k_{:03d}'.format(i))
-        data_group.create_dataset('freq',data=freq)
-        data_group.create_dataset('ω_plus_min',data=omega['ω_plus_min'][i])
-        data_group.create_dataset('ω_minus_max',data=omega['ω_minus_max'][i])
-        data_group.create_dataset('eig_w',data=eigenfunctions['w'][i])
-        data_group.create_dataset('eig_u',data=eigenfunctions['u'][i])
-        data_group.create_dataset('eig_T',data=eigenfunctions['T'][i])
+        data_group.create_dataset('eig_W',data=eigenfunc['W'][i])
+        data_group.create_dataset('eig_Q',data=eigenfunc['Q'][i])
+        data_group.create_dataset('eig_Ugx',data=eigenfunc['Ugx'][i])
+        data_group.create_dataset('eig_Ugy',data=eigenfunc['Ugy'][i])
+        data_group.create_dataset('eig_Ugz',data=eigenfunc['Ugz'][i])
+        data_group.create_dataset('eig_Udx',data=eigenfunc['Udx'][i])
+        data_group.create_dataset('eig_Udy',data=eigenfunc['Udy'][i])
+        data_group.create_dataset('eig_Udz',data=eigenfunc['Udz'][i])
     outfile.close()
-plt.show()
-'''
+
+

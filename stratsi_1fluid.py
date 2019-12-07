@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400.0
-kx_max = 800.0 
-nkx    = 2
+kx_min = 1e0
+kx_max = 1e3
+nkx    = 11
 
 '''
 physics options 
@@ -73,6 +73,12 @@ dimensional parameters
 tau_s = st0/Omega
 Diff  = delta0*cs*Hgas
 visc  = alpha0*cs*Hgas
+
+'''
+output control
+'''
+nz_out   = 1024
+out_scale= nz_out/nz_waves
 
 '''
 functions to calc eqm profiles
@@ -427,10 +433,10 @@ for i, kx in enumerate(kx_space):
     abs_sig = np.abs(EP.evalues_good)
     sig_acceptable = abs_sig < Omega
 
-    if sig_acceptable.size > 0:
-        sigma      = EP.evalues_good[sig_acceptable]
-        sigma_index= EP.evalues_good_index[sig_acceptable]
+    sigma      = EP.evalues_good[sig_acceptable]
+    sigma_index= EP.evalues_good_index[sig_acceptable]
     
+    if sigma.size > 0:        
         growth   =  np.real(sigma)
         g1       =  np.argmax(growth)
         opt_freq = sigma[g1]
@@ -442,15 +448,26 @@ for i, kx in enumerate(kx_space):
         Ux = EP.solver.state['Ux']
         Uy = EP.solver.state['Uy']
         Uz = EP.solver.state['Uz']
+
+        W.set_scales(scales=out_scale)
+        Q.set_scales(scales=out_scale)
+        Ux.set_scales(scales=out_scale)
+        Uy.set_scales(scales=out_scale)
+        Uz.set_scales(scales=out_scale)
+
+        Wout = W['g']
+        Qout = Q['g']
+        Uxout = Ux['g']
+        Uyout = Uy['g']
+        Uzout = Uz['g']
+        
     else:
         opt_freq = np.nan
-        W = [0.0]
-        Q = [0.0]
-        Ux= [0.0]
-        Uy= [0.0]
-        Uz= [0.0]
-
-    print("i, kx, sigma", i, kx, opt_freq)
+        Wout = np.zeros(nz_out)
+        Qout = np.zeros(nz_out)
+        Uxout= np.zeros(nz_out)
+        Uyout= np.zeros(nz_out)
+        Uzout= np.zeros(nz_out)
 
     eigenfreq.append(opt_freq) #store eigenfreq
 
@@ -460,28 +477,31 @@ for i, kx in enumerate(kx_space):
     eigenfunc['Uy'].append([])
     eigenfunc['Uz'].append([])
 
-    eigenfunc['W'][i] = W['g']
-    eigenfunc['Q'][i] = Q['g']
-    eigenfunc['Ux'][i] = Ux['g']
-    eigenfunc['Uy'][i] = Uy['g']
-    eigenfunc['Uz'][i] = Uz['g']
-    
-#    eigenfunc['W'][i].append(np.copy(W['g']))
-#    eigenfunc['Q'][i].append(np.copy(Q['g']))
-#    eigenfunc['Ux'][i].append(np.copy(Ux['g']))
-#    eigenfunc['Uy'][i].append(np.copy(Uy['g']))
-#    eigenfunc['Uz'][i].append(np.copy(Uz['g']))
+    eigenfunc['W'][i] = np.copy(Wout)
+    eigenfunc['Q'][i] = np.copy(Qout)
+    eigenfunc['Ux'][i] = np.copy(Uxout)
+    eigenfunc['Uy'][i] = np.copy(Uyout)
+    eigenfunc['Uz'][i] = np.copy(Uzout)
 
+'''
+print results to screen
+'''
+for i, kx in enumerate(kx_space):
+    print("i, kx, growth, freq = {0:3d} {1:1.2e} {2:9.6f} {3:9.6f}".format(i, kx, eigenfreq[i].real, -eigenfreq[i].imag))
+    
 '''
 data output
 '''
-
-with h5py.File('stratsi_1fluid_modes.h5','w') as outfile:
     
+with h5py.File('stratsi_1fluid_modes.h5','w') as outfile:
+    z_out = domain_EVP.grid(0, scales=out_scale)
+
     scale_group = outfile.create_group('scales')
     scale_group.create_dataset('kx_space',data=kx_space)
     scale_group.create_dataset('eig_freq',data=eigenfreq)
-    scale_group.create_dataset('z',   data=z)
+    scale_group.create_dataset('z',   data=z_out)
+    scale_group.create_dataset('zmax', data=zmax)
+
     
     tasks_group = outfile.create_group('tasks')
 
