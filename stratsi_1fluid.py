@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1e0
-kx_max = 1e3
-nkx    = 11
+kx_min = 400
+kx_max = 4000
+nkx    = 20
 
 '''
 physics options 
@@ -63,7 +63,7 @@ eta_hat   = 0.05
 
 zmin      = 0
 zmax      = 0.08
-nz_waves  = 128
+nz_waves  = 256
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -418,23 +418,43 @@ eigenvalue problem, sweep through kx space
 for each kx, filter modes and keep most unstable one
 '''
 
-EP = Eigenproblem(waves)
+#EP_list = [Eigenproblem(waves), Eigenproblem(waves, sparse=True)] 
+EP = Eigenproblem(waves, sparse=True)
 kx_space = np.logspace(np.log10(kx_min),np.log10(kx_max), num=nkx)
 
 eigenfreq = []
 eigenfunc = {'W':[], 'Q':[], 'Ux':[], 'Uy':[], 'Uz':[]}
 
 for i, kx in enumerate(kx_space):
+
+    # for n in range(0,2):
+    #     EP_list[n].EVP.namespace['kx'].value = kx
+    #     EP_list[n].EVP.parameters['kx'] = kx
+    
+    # if i == 0:
+    #     EP = EP_list[0]
+    #     EP.solve()
+    # else:
+    #     EP = EP_list[1]
+    #     trial = eigenfreq[i-1]
+    #     EP.solve(N=20, target = trial)
+
     EP.EVP.namespace['kx'].value = kx
     EP.EVP.parameters['kx'] = kx
-    EP.solve()
+
+    if i == 0:
+        trial = 0.5*Omega
+    else:
+        trial = eigenfreq[i-1]
+        
+    EP.solve(N=20, target = trial)
     EP.reject_spurious()
 
     abs_sig = np.abs(EP.evalues_good)
     sig_acceptable = abs_sig < Omega
 
-    sigma      = EP.evalues_good[sig_acceptable]
-    sigma_index= EP.evalues_good_index[sig_acceptable]
+    sigma      = EP.evalues_good#[sig_acceptable]
+    sigma_index= EP.evalues_good_index#[sig_acceptable]
     
     if sigma.size > 0:        
         growth   =  np.real(sigma)
@@ -470,7 +490,7 @@ for i, kx in enumerate(kx_space):
         Uzout= np.zeros(nz_out)
 
     eigenfreq.append(opt_freq) #store eigenfreq
-
+    
     eigenfunc['W'].append([])
     eigenfunc['Q'].append([])
     eigenfunc['Ux'].append([])
@@ -482,7 +502,7 @@ for i, kx in enumerate(kx_space):
     eigenfunc['Ux'][i] = np.copy(Uxout)
     eigenfunc['Uy'][i] = np.copy(Uyout)
     eigenfunc['Uz'][i] = np.copy(Uzout)
-
+    
 '''
 print results to screen
 '''
@@ -514,6 +534,39 @@ with h5py.File('stratsi_1fluid_modes.h5','w') as outfile:
         data_group.create_dataset('eig_Uz',data=eigenfunc['Uz'][i])
     outfile.close()
 
+'''
+plot equilibrium profiles
+'''
 
+fontsize= 24
+nlev    = 128
+nclev   = 6
+cmap    = plt.cm.inferno
+    
+z = domain_EVP.grid(0, scales=nz_out)
+eps = epsilon_eqm(z)
 
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
+ymax = np.amax(eps)
+
+plt.xlim(zmin,zmax)
+plt.ylim(0,ymax)
+
+plt.plot(z, eps, linewidth=2)
+
+plt.rc('font',size=fontsize,weight='bold')
+
+#lines1, labels1 = ax.get_legend_handles_labels()
+#legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$\rho_d/\rho_g$', fontsize=fontsize)
+
+fname = 'stratsi_1fluid_epsilon'
+plt.savefig(fname,dpi=150)

@@ -51,13 +51,13 @@ mode parameters
 '''
 kx     = 400.0
 kx_min = 400
-kx_max = 1e4
+kx_max = 4000
 nkx    = 20
 
 '''
 vertical resolution
 '''
-nz_waves = 128
+nz_waves = 192
 
 '''
 physics options 

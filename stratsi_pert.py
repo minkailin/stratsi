@@ -303,7 +303,8 @@ eigenvalue problem, sweep through kx space
 for each kx, filter modes and keep most unstable one
 '''
 
-EP_list = [Eigenproblem(waves), Eigenproblem(waves, sparse=True)] 
+#EP_list = [Eigenproblem(waves), Eigenproblem(waves, sparse=True)] 
+EP = Eigenproblem(waves, sparse=True)
 kx_space = np.logspace(np.log10(kx_min),np.log10(kx_max), num=nkx)
 
 eigenfreq = []
@@ -311,25 +312,34 @@ eigenfunc = {'W':[], 'Q':[], 'Ugx':[], 'Ugy':[], 'Ugz':[], 'Udx':[], 'Udy':[], '
 
 for i, kx in enumerate(kx_space):
 
-    for n in range(0,2):
-        EP_list[n].EVP.namespace['kx'].value = kx
-        EP_list[n].EVP.parameters['kx'] = kx
+    # for n in range(0,2):
+    #     EP_list[n].EVP.namespace['kx'].value = kx
+    #     EP_list[n].EVP.parameters['kx'] = kx
     
+    # if i == 0:
+    #     EP = EP_list[0]
+    #     EP.solve()
+    # else:
+    #     EP = EP_list[1]
+    #     trial = eigenfreq[i-1]
+    #     EP.solve(N=20, target = trial)
+
+    EP.EVP.namespace['kx'].value = kx
+    EP.EVP.parameters['kx'] = kx
+
     if i == 0:
-        EP = EP_list[0]
-        EP.solve()
+        trial = 0.5
     else:
-        EP = EP_list[1]
         trial = eigenfreq[i-1]
-        EP.solve(N=20, target = trial)
-    
+
+    EP.solve(N=20, target = trial)
     EP.reject_spurious()
 
     abs_sig = np.abs(EP.evalues_good)
     sig_acceptable = abs_sig < 1.0
 
-    sigma      = EP.evalues_good[sig_acceptable]
-    sigma_index= EP.evalues_good_index[sig_acceptable]
+    sigma      = EP.evalues_good#[sig_acceptable]
+    sigma_index= EP.evalues_good_index#[sig_acceptable]
         
     if sigma.size > 0:
         growth   =  np.real(sigma)
