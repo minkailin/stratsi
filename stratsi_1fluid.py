@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400
-kx_max = 4000
-nkx    = 20
+kx_min = 1e1
+kx_max = 1e3
+nkx    = 1
 
 '''
 physics options 
@@ -55,15 +55,15 @@ tstop        = True
 '''
 problem parameters
 '''
-alpha0    = 1e-6
+alpha0    = 1e-4
 st0       = 1e-2
 dg0       = 2.0
-metal     = 0.02
+metal     = 0.1
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.08
-nz_waves  = 256
+zmax      = 0.6
+nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -73,6 +73,13 @@ dimensional parameters
 tau_s = st0/Omega
 Diff  = delta0*cs*Hgas
 visc  = alpha0*cs*Hgas
+
+'''
+numerical options
+'''
+first_solve_dense = True #use the dense solver for very first eigen calc
+Neig = 20 #number of eigenvalues to get for sparse solver
+sig_filter = 0.3*Omega #mode filter, only allow |sigma| < sig_filter
 
 '''
 output control
@@ -185,6 +192,7 @@ def get_dg0_from_metal():
 
 if fix_metal == True:
     dg0 = get_dg0_from_metal()
+    print("adjust midplane d/g={0:4.2f} to satisfy Z={1:4.2f}".format(dg0, metal))
 
 '''
 setup domain and calculate derivatives of vertical profiles as needed 
@@ -418,43 +426,39 @@ eigenvalue problem, sweep through kx space
 for each kx, filter modes and keep most unstable one
 '''
 
-#EP_list = [Eigenproblem(waves), Eigenproblem(waves, sparse=True)] 
-EP = Eigenproblem(waves, sparse=True)
+EP_list = [Eigenproblem(waves), Eigenproblem(waves, sparse=True)] 
 kx_space = np.logspace(np.log10(kx_min),np.log10(kx_max), num=nkx)
 
 eigenfreq = []
 eigenfunc = {'W':[], 'Q':[], 'Ux':[], 'Uy':[], 'Uz':[]}
 
 for i, kx in enumerate(kx_space):
-
-    # for n in range(0,2):
-    #     EP_list[n].EVP.namespace['kx'].value = kx
-    #     EP_list[n].EVP.parameters['kx'] = kx
     
-    # if i == 0:
-    #     EP = EP_list[0]
-    #     EP.solve()
-    # else:
-    #     EP = EP_list[1]
-    #     trial = eigenfreq[i-1]
-    #     EP.solve(N=20, target = trial)
-
+    if (i == 0) and (first_solve_dense == True):
+            EP = EP_list[0]
+    else:
+            EP = EP_list[1]
+    
     EP.EVP.namespace['kx'].value = kx
     EP.EVP.parameters['kx'] = kx
-
+    
     if i == 0:
-        trial = 0.5*Omega
+        if first_solve_dense == True:
+            EP.solve()
+        else:
+            trial = 0.5*Omega
+            EP.solve(N=Neig, target = trial)
     else:
         trial = eigenfreq[i-1]
-        
-    EP.solve(N=20, target = trial)
+        EP.solve(N=Neig, target = trial)
+
     EP.reject_spurious()
 
     abs_sig = np.abs(EP.evalues_good)
-    sig_acceptable = abs_sig < Omega
+    sig_acceptable = abs_sig < sig_filter
 
-    sigma      = EP.evalues_good#[sig_acceptable]
-    sigma_index= EP.evalues_good_index#[sig_acceptable]
+    sigma      = EP.evalues_good[sig_acceptable]
+    sigma_index= EP.evalues_good_index[sig_acceptable]
     
     if sigma.size > 0:        
         growth   =  np.real(sigma)

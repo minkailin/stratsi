@@ -26,14 +26,14 @@ comm = MPI.COMM_WORLD
 disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
-alpha    = 1e-6     #alpha viscosity value, assumed constant
+alpha    = 1e-4     #alpha viscosity value, assumed constant
 eta_hat  = 0.05     #dimensionless radial pressure gradient 
 
 '''
 dust parameters
 '''
 dg0      = 2.0     #midplane d/g ratio
-metal    = 0.02    #metallicity  
+metal    = 0.1    #metallicity  
 stokes   = 1e-2    #assume a constant stokes number throughout 
 
 delta    = alpha*(1.0 + stokes + 4.0*stokes*stokes)/(1.0+stokes*stokes)**2
@@ -43,21 +43,21 @@ beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
 grid parameters
 '''
 zmin    = 0.0
-zmax    = 0.08
+zmax    = 0.6
 nz_vert = 256
 
 '''
 mode parameters
 '''
 kx     = 400.0
-kx_min = 400
-kx_max = 4000
-nkx    = 20
+kx_min = 1e1
+kx_max = 1e4
+nkx    = 100
 
 '''
 vertical resolution
 '''
-nz_waves = 192
+nz_waves = 128
 
 '''
 physics options 
@@ -67,6 +67,13 @@ viscosity_eqm = False
 viscosity_pert= False
 diffusion     = True
 backreaction  = True
+
+'''
+numerical options
+'''
+first_solve_dense = False #use the dense solver for very first eigen calc
+Neig = 20 #number of eigenvalues to get for sparse solver
+sig_filter = 1e10 #mode filter, only allow |sigma| < sig_filter
 
 '''
 analytic vertical profiles for d/g, vdz, rhog assuming constant stokes number 
@@ -147,6 +154,7 @@ def get_dg0_from_metal():
 
 if fix_metal == True:
     dg0 = get_dg0_from_metal()
+    print("adjust midplane d/g={0:4.2f} to satisfy Z={1:4.2f}".format(dg0, metal))
 
 #print(epsilon(0.0))    
 #print("dg0=",dg0)
