@@ -50,9 +50,9 @@ nz_vert = 256
 mode parameters
 '''
 kx     = 400.0
-kx_min = 1e0
-kx_max = 1e3 
-nkx    = 11
+kx_min = 400
+kx_max = 1e4
+nkx    = 20
 
 '''
 vertical resolution

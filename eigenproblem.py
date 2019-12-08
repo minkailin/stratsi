@@ -19,7 +19,6 @@ class Eigenproblem():
         self.pencil = pencil
         self.N = N
         self.target = target
-
         if self.sparse:
             self.solver.solve_sparse(self.solver.pencils[self.pencil], N=self.N, target=self.target, rebuild_coeffs=True)
         else:
@@ -169,7 +168,8 @@ class Eigenproblem():
 
         solver = self.EVP_hires.build_solver()
         if self.sparse:
-            solver.solve_sparse(solver.pencils[self.pencil], N=10, target=0, rebuild_coeffs=True)
+        #    solver.solve_sparse(solver.pencils[self.pencil], N=10, target=0, rebuild_coeffs=True)
+            solver.solve_sparse(solver.pencils[self.pencil], N=self.N, target=self.target, rebuild_coeffs=True)
         else:
             solver.solve_dense(solver.pencils[self.pencil], rebuild_coeffs=True)
         self.evalues_hires = solver.eigenvalues

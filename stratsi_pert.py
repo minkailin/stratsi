@@ -303,16 +303,26 @@ eigenvalue problem, sweep through kx space
 for each kx, filter modes and keep most unstable one
 '''
 
-EP = Eigenproblem(waves)
+EP_list = [Eigenproblem(waves), Eigenproblem(waves, sparse=True)] 
 kx_space = np.logspace(np.log10(kx_min),np.log10(kx_max), num=nkx)
 
 eigenfreq = []
 eigenfunc = {'W':[], 'Q':[], 'Ugx':[], 'Ugy':[], 'Ugz':[], 'Udx':[], 'Udy':[], 'Udz':[]}
 
 for i, kx in enumerate(kx_space):
-    EP.EVP.namespace['kx'].value = kx
-    EP.EVP.parameters['kx'] = kx
-    EP.solve()
+
+    for n in range(0,2):
+        EP_list[n].EVP.namespace['kx'].value = kx
+        EP_list[n].EVP.parameters['kx'] = kx
+    
+    if i == 0:
+        EP = EP_list[0]
+        EP.solve()
+    else:
+        EP = EP_list[1]
+        trial = eigenfreq[i-1]
+        EP.solve(N=20, target = trial)
+    
     EP.reject_spurious()
 
     abs_sig = np.abs(EP.evalues_good)

@@ -12,11 +12,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--mode", nargs='*', help="select mode number")
 args = parser.parse_args()
 if(args.mode):
-    print(args.mode[0])
     plot_mode = np.int(args.mode[0])
 else:
     plot_mode = 0
 
+print("plotting mode number {0:3d}".format(plot_mode))
+    
 '''
 read in one-fluid data 
 '''
