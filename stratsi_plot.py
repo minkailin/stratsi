@@ -3,8 +3,23 @@ import numpy as np
 from mpi4py import MPI
 import matplotlib.pyplot as plt
 import h5py
+import argparse
 
-plot_mode = 1
+'''
+process command line arguements
+'''
+parser = argparse.ArgumentParser()
+parser.add_argument("--mode", nargs='*', help="select mode number")
+args = parser.parse_args()
+if(args.mode):
+    print(args.mode[0])
+    plot_mode = np.int(args.mode[0])
+else:
+    plot_mode = 0
+
+'''
+read in one-fluid data 
+'''
 
 with h5py.File('stratsi_1fluid_modes.h5','r') as infile:
   
@@ -36,6 +51,11 @@ Uy          = eig_Uy[plot_mode]
 Uz          = eig_Uz[plot_mode]
 
 print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sigma_1f.real, -sigma_1f.imag))
+
+
+'''
+read in two-fluid data
+'''
 
 with h5py.File('stratsi_modes.h5','r') as infile:
   
@@ -131,6 +151,36 @@ plt.yticks(fontsize=fontsize,weight='bold')
 plt.ylabel(r'$\delta v_{z}$', fontsize=fontsize)
 
 fname = 'stratsi_plot_vz'
+plt.savefig(fname,dpi=150)
+
+#########################################################################################################
+
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+plt.xlim(xmin,xmax)
+plt.ylim(-ymax,ymax)
+
+Udz_norm = np.conj(Udz[0])*Udz
+Udz_norm/= np.amax(np.abs(Udz_norm))
+
+plt.plot(z, np.real(Udz_norm), linewidth=2, label=r're, two-fluid')
+plt.plot(z, np.imag(Udz_norm), linewidth=2, label=r'im, two-fluid')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$\delta v_{dz}$', fontsize=fontsize)
+
+fname = 'stratsi_plot_vdz'
 plt.savefig(fname,dpi=150)
 
 #########################################################################################################
