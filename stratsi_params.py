@@ -26,7 +26,7 @@ comm = MPI.COMM_WORLD
 disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
-alpha    = 1e-7     #alpha viscosity value, assumed constant
+alpha    = 1e-6     #alpha viscosity value, assumed constant
 eta_hat  = 0.05     #dimensionless radial pressure gradient 
 
 '''
@@ -34,7 +34,7 @@ dust parameters
 '''
 dg0      = 2.0     #midplane d/g ratio
 metal    = 0.02    #metallicity  
-stokes   = 1e-3    #assume a constant stokes number throughout 
+stokes   = 1e-2    #assume a constant stokes number throughout 
 
 delta    = alpha*(1.0 + stokes + 4.0*stokes*stokes)/(1.0+stokes*stokes)**2
 beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
@@ -43,15 +43,15 @@ beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
 grid parameters
 '''
 zmin    = 0.0
-zmax    = 0.05
+zmax    = 0.08
 nz_vert = 256
 
 '''
 mode parameters
 '''
 kx     = 400.0
-kx_min = 1600
-kx_max = 800
+kx_min = 800
+kx_max = 400
 nkx    = 1
 
 '''
@@ -71,6 +71,7 @@ backreaction  = True
 '''
 numerical options
 '''
+all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense =True #use the dense solver for very first eigen calc
 Neig = 20 #number of eigenvalues to get for sparse solver
 eigen_trial = 0.5 #trial eigenvalue

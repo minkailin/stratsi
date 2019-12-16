@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1600
-kx_max = 800
-nkx    = 1
+kx_min = 800
+kx_max = 400
+nkx    = 2
 
 '''
 physics options 
@@ -55,15 +55,15 @@ tstop        = True
 '''
 problem parameters
 '''
-alpha0    = 1e-7
-st0       = 1e-3
+alpha0    = 1e-6
+st0       = 1e-2
 dg0       = 2.0
 metal     = 0.02
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.05
-nz_waves  = 256
+zmax      = 0.08
+nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -77,9 +77,10 @@ visc  = alpha0*cs*Hgas
 '''
 numerical options
 '''
+all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
-Neig = 20 #number of eigenvalues to get for sparse solver
-eigen_trial = 0.5 #trial eigenvalue
+Neig = 10 #number of eigenvalues to get for sparse solver
+eigen_trial = 0.5 #trial eigenvalue in units of Omega
 sig_filter = Omega #mode filter, only allow |sigma| < sig_filter
 
 '''
@@ -120,6 +121,13 @@ def d2ln_P_eqm(z):
     eps = epsilon_eqm(z)
     return -(1.0 + eps*(1.0 - tau_s*Omega*Omega*z*z/Diff) )/Hgas/Hgas
 
+def Nz2_eqm(z):
+    eps  = epsilon_eqm(z)
+    deps = depsilon_eqm(z)
+    dlnP = dln_P_eqm(z)
+
+    return Omega*Omega*dlnP*deps/(1.0+eps)**2
+    
 def dln_rho_eqm(z):
     dlnP = dln_P_eqm(z)
     eps = epsilon_eqm(z)
@@ -357,11 +365,6 @@ if tstop == True:
 if tstop == False:
     waves.substitutions['xmom_LHS']="sigma*Ux"
 waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega/(1+epsilon0)*delta_ln_rho + 2*Omega*Uy"
-#the above form is assuming the eta term is multiplied by rho_g,eqm/rho. but it should be rho_g/rho as below 
-#waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega*epsilon0/(1+epsilon0)/(1+epsilon0)*Q + 2*Omega*Uy"
-#the form below assumes the eta term is a constant forcing, therefore it doesn't appear in linearized equations
-#waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W + 2*Omega*Uy"
-
     
 #y-mom equation
 if tstop == True:
@@ -402,10 +405,6 @@ if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('left(Uz)=0')
 
     waves.add_bc('right(dW) = 0')
-#    waves.add_bc('right(dQ) = 0')
-   
-#    waves.add_bc('right(Uz) = 0')
-#    waves.add_bc('right(W)  = 0')
     waves.add_bc('right(Q)  = 0')
 
 if (diffusion == False) and (tstop == True): 
@@ -415,9 +414,7 @@ if (diffusion == False) and (tstop == True):
     waves.add_bc('left(dz(Uy))=0')
     waves.add_bc('left(Uz)=0')
     
-#    waves.add_bc('right(Uz) = 0')
     waves.add_bc('right(dQ)=0')
-#    waves.add_bc('right(dW) = 0')
     
 if (diffusion == False) and (tstop == False): #no diffusion, perfect coupling, 2 odes (standard problem)
     waves.add_bc('left(Uz)=0')
@@ -425,7 +422,6 @@ if (diffusion == False) and (tstop == False): #no diffusion, perfect coupling, 2
     
 if (diffusion == True) and (tstop == False):
     waves.add_bc('left(dW)=0')
-#    waves.add_bc('left(dQ)=0')
     waves.add_bc('left(Uz)=0')
     waves.add_bc('right(Uz) = 0')
 
@@ -442,24 +438,27 @@ eigenfreq = []
 eigenfunc = {'W':[], 'Q':[], 'Ux':[], 'Uy':[], 'Uz':[]}
 
 for i, kx in enumerate(kx_space):
-    
-    if (i == 0) and (first_solve_dense == True):
+        
+    if ((i == 0) and (first_solve_dense == True)) or all_solve_dense == True:
             EP = EP_list[0]
     else:
             EP = EP_list[1]
     
     EP.EVP.namespace['kx'].value = kx
     EP.EVP.parameters['kx'] = kx
-    
-    if i == 0:
-        if first_solve_dense == True:
-            EP.solve()
-        else:
-            trial = eigen_trial*Omega
-            EP.solve(N=Neig, target = trial)
+
+    if all_solve_dense == True:
+        EP.solve()
     else:
-        trial = eigenfreq[i-1]
-        EP.solve(N=Neig, target = trial)
+        if i == 0:
+            if first_solve_dense == True:
+                EP.solve()
+            else:
+                trial = eigen_trial*Omega
+                EP.solve(N=Neig, target = trial)
+        else:
+            trial = eigenfreq[i-1]
+            EP.solve(N=Neig, target = trial)
 
     EP.reject_spurious()
 
@@ -558,6 +557,7 @@ cmap    = plt.cm.inferno
     
 z = domain_EVP.grid(0, scales=nz_out)
 eps = epsilon_eqm(z)
+Nz2 = Nz2_eqm(z)
 
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
@@ -569,6 +569,8 @@ plt.xlim(zmin,zmax)
 plt.ylim(0,ymax)
 
 plt.plot(z, eps, linewidth=2)
+plt.plot(z, Nz2, linewidth=2)
+
 #plt.plot(np.array([0,1]),np.array([1,1]),linewidth=2)
 
 plt.rc('font',size=fontsize,weight='bold')

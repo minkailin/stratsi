@@ -265,28 +265,14 @@ if viscosity_pert == True:
 boundary conditions (reflection)
 '''
 waves.add_bc('left(dz(W))=0')
-'''
-waves.add_bc('left(Ugz)=0')
-waves.add_bc('left(dz(Udx))=0')
-waves.add_bc('left(dz(Udy))=0')
-waves.add_bc('left(Udz)=0')
-waves.add_bc('right(Ugz)=0')
-'''
-
-'''
+#mid-plane symmetry conditions on center-of-mass velocities, as in one-fluid case 
 waves.add_bc('left(dz(Ugx - epsilon0*vgx0*Q/(1+epsilon0) + epsilon0*Udx + epsilon0*vdx0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilon0*vdy0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(Ugz + epsilon0*Udz)=0')
-waves.add_bc('right(dW)=0')
-waves.add_bc('right(Ugz + epsilon0*Udz + epsilon0*vdz0*Q/(1+epsilon0))=0')
-'''
 
-#same as above but with Q=0 instead of dW=0 at zmax 
-waves.add_bc('left(dz(Ugx - epsilon0*vgx0*Q/(1+epsilon0) + epsilon0*Udx + epsilon0*vdx0*Q/(1+epsilon0)))=0')
-waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilon0*vdy0*Q/(1+epsilon0)))=0')
-waves.add_bc('left(Ugz + epsilon0*Udz)=0')
 waves.add_bc('right(Q)=0')
-waves.add_bc('right(Ugz + epsilon0*Udz)=0')
+waves.add_bc('right(dz(W))=0')
+#waves.add_bc('right(Ugz + epsilon0*Udz)=0')
 
 if diffusion == True:
     waves.add_bc('left(Q_p)=0')
@@ -312,23 +298,26 @@ eigenfunc = {'W':[], 'Q':[], 'Ugx':[], 'Ugy':[], 'Ugz':[], 'Udx':[], 'Udy':[], '
 
 for i, kx in enumerate(kx_space):
     
-    if (i == 0) and (first_solve_dense == True):
+    if ((i == 0) and (first_solve_dense == True)) or all_solve_dense == True:
             EP = EP_list[0]
     else:
             EP = EP_list[1]
     
     EP.EVP.namespace['kx'].value = kx
     EP.EVP.parameters['kx'] = kx
-    
-    if i == 0:
-        if first_solve_dense == True:
-            EP.solve()
-        else:
-            trial = eigen_trial
-            EP.solve(N=Neig, target = trial)
+
+    if all_solve_dense == True:
+        EP.solve()
     else:
-        trial = eigenfreq[i-1]
-        EP.solve(N=Neig, target = trial)
+        if i == 0:
+            if first_solve_dense == True:
+                EP.solve()
+            else:
+                trial = eigen_trial
+                EP.solve(N=Neig, target = trial)
+        else:
+            trial = eigenfreq[i-1]
+            EP.solve(N=Neig, target = trial)
 
     EP.reject_spurious()
 
