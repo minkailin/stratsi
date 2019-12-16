@@ -199,7 +199,7 @@ plt.plot(z_1f, Q1f_abs, linewidth=2, label=r'one-fluid')
 
 Q_abs = np.abs(Q)
 Q_abs/= np.amax(Q_abs)
-plt.plot(z, Q_abs, linewidth=2, label=r'two-fluid')
+plt.plot(z, Q_abs, linewidth=2, label=r'two-fluid',linestyle='dashed')
 
 plt.rc('font',size=fontsize,weight='bold')
 

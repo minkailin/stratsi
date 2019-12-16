@@ -55,6 +55,7 @@ constant parameters
 '''
 waves.parameters['delta']      = delta
 waves.parameters['alpha']      = alpha
+waves.parameters['eta_hat']      = eta_hat
 waves.parameters['inv_stokes'] = 1.0/stokes 
 waves.parameters['kx']         = kx
 
@@ -242,7 +243,7 @@ if backreaction == False:
     
 #gas equations
 waves.add_equation("gas_mass_LHS = 0 ")
-waves.add_equation("sigma*Ugx + dvgx0*Ugz + ikx*vgx0*Ugx - 2*Ugy + ikx*W - delta_backreaction_x - delta_Fvisc_x = 0")
+waves.add_equation("sigma*Ugx + dvgx0*Ugz + ikx*vgx0*Ugx - 2*Ugy + ikx*W + 2*eta_hat*W - delta_backreaction_x - delta_Fvisc_x = 0")
 waves.add_equation("sigma*Ugy + dvgy0*Ugz + ikx*vgx0*Ugy + 0.5*Ugx - delta_backreaction_y - delta_Fvisc_y = 0")
 waves.add_equation("sigma*Ugz + ikx*vgx0*Ugz + dz(W) - delta_backreaction_z - delta_Fvisc_z = 0")
 
@@ -323,7 +324,7 @@ for i, kx in enumerate(kx_space):
         if first_solve_dense == True:
             EP.solve()
         else:
-            trial = 0.5
+            trial = eigen_trial
             EP.solve(N=Neig, target = trial)
     else:
         trial = eigenfreq[i-1]

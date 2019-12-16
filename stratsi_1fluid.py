@@ -40,8 +40,8 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1e1
-kx_max = 1e3
+kx_min = 1600
+kx_max = 800
 nkx    = 1
 
 '''
@@ -55,15 +55,15 @@ tstop        = True
 '''
 problem parameters
 '''
-alpha0    = 1e-4
-st0       = 1e-2
+alpha0    = 1e-7
+st0       = 1e-3
 dg0       = 2.0
-metal     = 0.1
+metal     = 0.02
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.6
-nz_waves  = 128
+zmax      = 0.05
+nz_waves  = 256
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -79,7 +79,8 @@ numerical options
 '''
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 20 #number of eigenvalues to get for sparse solver
-sig_filter = 0.3*Omega #mode filter, only allow |sigma| < sig_filter
+eigen_trial = 0.5 #trial eigenvalue
+sig_filter = Omega #mode filter, only allow |sigma| < sig_filter
 
 '''
 output control
@@ -342,7 +343,10 @@ if tstop == False:
     waves.substitutions['energy_LHS']="sigma*(W - delta_ln_rho) + (dln_P0-dln_rho0)*Uz"
 
 if tstop == True:
-    waves.substitutions['energy_RHS']="K_over_P0*(dz(dW) + delta_ln_K_p*dln_P0 + delta_ln_K*d2ln_P0 + dln_K0*(delta_ln_K*dln_P0 + W_p) - kx*kx*W)"
+    waves.substitutions['energy_RHS1']="K_over_P0*(dz(dW) + delta_ln_K_p*dln_P0 + delta_ln_K*d2ln_P0 + dln_K0*(delta_ln_K*dln_P0 + W_p) - kx*kx*W)"
+    waves.substitutions['delta_ln_g']  = "(1-epsilon0)*Q/(1+epsilon0)"
+    waves.substitutions['energy_RHS2']="-2*eta_hat*cs*Omega*tau_s*epsilon0/(1+epsilon0)/(1+epsilon0)*ikx*delta_ln_g" 
+    waves.substitutions['energy_RHS']="energy_RHS1 + energy_RHS2"
 if tstop == False:
     waves.substitutions['energy_RHS']="0"
 
@@ -353,7 +357,12 @@ if tstop == True:
 if tstop == False:
     waves.substitutions['xmom_LHS']="sigma*Ux"
 waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega/(1+epsilon0)*delta_ln_rho + 2*Omega*Uy"
+#the above form is assuming the eta term is multiplied by rho_g,eqm/rho. but it should be rho_g/rho as below 
+#waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega*epsilon0/(1+epsilon0)/(1+epsilon0)*Q + 2*Omega*Uy"
+#the form below assumes the eta term is a constant forcing, therefore it doesn't appear in linearized equations
+#waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W + 2*Omega*Uy"
 
+    
 #y-mom equation
 if tstop == True:
     waves.substitutions['ymom_LHS']="sigma*Uy + dvy0*Uz + vz0*dz(Uy)"
@@ -446,7 +455,7 @@ for i, kx in enumerate(kx_space):
         if first_solve_dense == True:
             EP.solve()
         else:
-            trial = 0.5*Omega
+            trial = eigen_trial*Omega
             EP.solve(N=Neig, target = trial)
     else:
         trial = eigenfreq[i-1]
@@ -554,12 +563,13 @@ fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
-ymax = np.amax(eps)
+ymax = np.around(np.amax(eps),decimals=1)
 
 plt.xlim(zmin,zmax)
 plt.ylim(0,ymax)
 
 plt.plot(z, eps, linewidth=2)
+#plt.plot(np.array([0,1]),np.array([1,1]),linewidth=2)
 
 plt.rc('font',size=fontsize,weight='bold')
 
