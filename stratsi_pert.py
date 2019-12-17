@@ -189,12 +189,13 @@ waves.substitutions['ikx'] = "1j*kx"
 waves.substitutions['delta_ln_rhod'] = "Q + W"
 
 if diffusion == True:
-    waves.substitutions['delta_ln_rhod_p'] = "Q_p + dz(W)"
+    waves.substitutions['dQ'] = "Q_p"
     waves.substitutions['delta_eps_p_over_eps'] = "dln_epsilon0*Q + Q_p"
     waves.substitutions['delta_eps_pp_over_eps'] = "d2epsilon0*Q/epsilon0 + 2*dln_epsilon0*Q_p + dz(Q_p)"
 if diffusion == False:
-    waves.substitutions['delta_ln_rhod_p'] = "dz(Q) + dz(W)"
+    waves.substitutions['dQ'] = "dz(Q)"
     
+waves.substitutions['delta_ln_rhod_p'] = "dQ + dz(W)"
 waves.substitutions['delta_ln_taus'] = "0"
 
 #dust continuity equation
@@ -264,18 +265,17 @@ if viscosity_pert == True:
 '''
 boundary conditions (reflection)
 '''
-waves.add_bc('left(dz(W))=0')
 #mid-plane symmetry conditions on center-of-mass velocities, as in one-fluid case 
+waves.add_bc('left(dz(W))=0')
+waves.add_bc('left(dQ)=0')
 waves.add_bc('left(dz(Ugx - epsilon0*vgx0*Q/(1+epsilon0) + epsilon0*Udx + epsilon0*vdx0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilon0*vdy0*Q/(1+epsilon0)))=0')
 waves.add_bc('left(Ugz + epsilon0*Udz)=0')
 
-waves.add_bc('right(Q)=0')
 waves.add_bc('right(dz(W))=0')
-#waves.add_bc('right(Ugz + epsilon0*Udz)=0')
 
 if diffusion == True:
-    waves.add_bc('left(Q_p)=0')
+    waves.add_bc('right(dQ)=0')
 
 if viscosity_pert == True:
     waves.add_bc('left(Ugx_p)=0')

@@ -40,29 +40,29 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 800
+kx_min = 1000
 kx_max = 400
-nkx    = 2
+nkx    = 1
 
 '''
 physics options 
 can choose to include/exclude particle diffusion, 
 '''
 fix_metal    = True
-diffusion    = True
+diffusion    = False
 tstop        = True
 
 '''
 problem parameters
 '''
-alpha0    = 1e-6
-st0       = 1e-2
+alpha0    = 1e-7
+st0       = 1e-3
 dg0       = 2.0
 metal     = 0.02
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.08
+zmax      = 0.05
 nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
@@ -78,10 +78,10 @@ visc  = alpha0*cs*Hgas
 numerical options
 '''
 all_solve_dense   = True #solve for all eigenvals for all kx
-first_solve_dense = True #use the dense solver for very first eigen calc
+first_solve_dense = False #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
-eigen_trial = 0.5 #trial eigenvalue in units of Omega
-sig_filter = Omega #mode filter, only allow |sigma| < sig_filter
+eigen_trial = 0.2858385+1j*0.8125620 #trial eigenvalue in units of Omega
+sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
 
 '''
 output control
@@ -405,7 +405,8 @@ if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('left(Uz)=0')
 
     waves.add_bc('right(dW) = 0')
-    waves.add_bc('right(Q)  = 0')
+#    waves.add_bc('right(Q)  = 0')
+    waves.add_bc('right(dQ)  = 0')
 
 if (diffusion == False) and (tstop == True): 
     waves.add_bc('left(dW)=0')
@@ -414,8 +415,11 @@ if (diffusion == False) and (tstop == True):
     waves.add_bc('left(dz(Uy))=0')
     waves.add_bc('left(Uz)=0')
     
-    waves.add_bc('right(dQ)=0')
-    
+#    waves.add_bc('right(dW) = 0')    
+#    waves.add_bc('right(dQ)=0')   
+    waves.add_bc('right(Q)  = 0')
+#    waves.add_bc('right(W)  = 0')
+
 if (diffusion == False) and (tstop == False): #no diffusion, perfect coupling, 2 odes (standard problem)
     waves.add_bc('left(Uz)=0')
     waves.add_bc('right(Uz) = 0')
