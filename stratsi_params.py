@@ -26,8 +26,9 @@ comm = MPI.COMM_WORLD
 disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
-alpha    = 1e-7     #alpha viscosity value, assumed constant
+alpha    = 1e-5     #alpha viscosity value, assumed constant
 eta_hat  = 0.05     #dimensionless radial pressure gradient 
+
 
 '''
 dust parameters
@@ -43,15 +44,15 @@ beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
 grid parameters
 '''
 zmin    = 0.0
-zmax    = 0.05
+zmax    = 0.5
 nz_vert = 1024
 
 '''
 mode parameters
 '''
 kx     = 400.0
-kx_min = 1e3
-kx_max = 400
+kx_min = 4000
+kx_max = 800
 nkx    = 1
 
 '''
@@ -65,7 +66,7 @@ physics options
 fix_metal     = True
 viscosity_eqm = False
 viscosity_pert= False
-diffusion     = False
+diffusion     = True
 backreaction  = True
 
 '''

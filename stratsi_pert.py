@@ -244,7 +244,7 @@ if backreaction == False:
     
 #gas equations
 waves.add_equation("gas_mass_LHS = 0 ")
-waves.add_equation("sigma*Ugx + dvgx0*Ugz + ikx*vgx0*Ugx - 2*Ugy + ikx*W + 2*eta_hat*W - delta_backreaction_x - delta_Fvisc_x = 0")
+waves.add_equation("sigma*Ugx + dvgx0*Ugz + ikx*vgx0*Ugx - 2*Ugy + ikx*W - delta_backreaction_x - delta_Fvisc_x = 0")
 waves.add_equation("sigma*Ugy + dvgy0*Ugz + ikx*vgx0*Ugy + 0.5*Ugx - delta_backreaction_y - delta_Fvisc_y = 0")
 waves.add_equation("sigma*Ugz + ikx*vgx0*Ugz + dz(W) - delta_backreaction_z - delta_Fvisc_z = 0")
 
@@ -275,15 +275,13 @@ waves.add_bc('left(Ugz + epsilon0*Udz)=0')
 waves.add_bc('right(dz(W))=0')
 
 if diffusion == True:
-    waves.add_bc('right(dQ)=0')
+    waves.add_bc('right(Q)=0')
 
 if viscosity_pert == True:
     waves.add_bc('left(Ugx_p)=0')
     waves.add_bc('left(Ugy_p)=0')
     waves.add_bc('right(Ugx_p)=0')
     waves.add_bc('right(Ugy_p)=0')
-
-
 
 '''
 eigenvalue problem, sweep through kx space

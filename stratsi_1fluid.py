@@ -40,8 +40,8 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1000
-kx_max = 400
+kx_min = 4000
+kx_max = 800
 nkx    = 1
 
 '''
@@ -49,20 +49,20 @@ physics options
 can choose to include/exclude particle diffusion, 
 '''
 fix_metal    = True
-diffusion    = False
+diffusion    = True
 tstop        = True
 
 '''
 problem parameters
 '''
-alpha0    = 1e-7
+alpha0    = 1e-5
 st0       = 1e-3
 dg0       = 2.0
 metal     = 0.02
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.05
+zmax      = 0.5
 nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
@@ -72,7 +72,6 @@ dimensional parameters
 '''
 tau_s = st0/Omega
 Diff  = delta0*cs*Hgas
-visc  = alpha0*cs*Hgas
 
 '''
 numerical options
@@ -80,7 +79,7 @@ numerical options
 all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = False #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
-eigen_trial = 0.2858385+1j*0.8125620 #trial eigenvalue in units of Omega
+eigen_trial = 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
 sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
 
 '''
@@ -276,7 +275,6 @@ dvy0['g']    = dvy_eqm(z)
 constant parameters
 '''
 waves.parameters['Diff']        = Diff
-waves.parameters['visc']        = visc
 waves.parameters['cs']          = cs
 waves.parameters['Hgas']        = Hgas
 waves.parameters['Omega']       = Omega
@@ -342,7 +340,8 @@ if diffusion == False:
    waves.substitutions['mass_RHS']="0"
    
 #pseudo-energy equation
-waves.substitutions['delta_ln_K']  = "(1-epsilon0)*Q/(1+epsilon0) + W"
+waves.substitutions['delta_ln_g']  = "(1-epsilon0)*Q/(1+epsilon0)"    
+waves.substitutions['delta_ln_K']  = "delta_ln_g + W"
 waves.substitutions['delta_ln_K_p']= "-2*depsilon0*Q/(1+epsilon0)/(1+epsilon0) + (1-epsilon0)*dQ/(1+epsilon0) + dW"
 
 if tstop == True:
@@ -352,20 +351,19 @@ if tstop == False:
 
 if tstop == True:
     waves.substitutions['energy_RHS1']="K_over_P0*(dz(dW) + delta_ln_K_p*dln_P0 + delta_ln_K*d2ln_P0 + dln_K0*(delta_ln_K*dln_P0 + W_p) - kx*kx*W)"
-    waves.substitutions['delta_ln_g']  = "(1-epsilon0)*Q/(1+epsilon0)"
-    waves.substitutions['energy_RHS2']="-2*eta_hat*cs*Omega*tau_s*epsilon0/(1+epsilon0)/(1+epsilon0)*ikx*delta_ln_g" 
+    waves.substitutions['energy_RHS2']="-2*eta_hat*cs*Omega*tau_s*epsilon0/(1+epsilon0)/(1+epsilon0)*ikx*delta_ln_g" #this should be used with ***
     waves.substitutions['energy_RHS']="energy_RHS1 + energy_RHS2"
 if tstop == False:
     waves.substitutions['energy_RHS']="0"
-
+    
 #x-mom equation
 waves.substitutions['P_over_rho'] = "cs*cs/(1+epsilon0)"
 if tstop == True:
     waves.substitutions['xmom_LHS']="sigma*Ux + vz0*dz(Ux)"
 if tstop == False:
     waves.substitutions['xmom_LHS']="sigma*Ux"
-waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega/(1+epsilon0)*delta_ln_rho + 2*Omega*Uy"
-    
+waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega/(1+epsilon0)*delta_ln_rho + 2*Omega*Uy" #this should be used with ***
+
 #y-mom equation
 if tstop == True:
     waves.substitutions['ymom_LHS']="sigma*Uy + dvy0*Uz + vz0*dz(Uy)"
@@ -388,7 +386,6 @@ waves.add_equation("zmom_LHS - zmom_RHS = 0")
 waves.add_equation("energy_LHS - energy_RHS = 0 ")
 
 #equations for first derivs of perts, i.e. dz(Q) = Q_p ...etc
-#in our formulation of second derivs of [epsilon, delta_vgx, delta_vgy] appear for full problem with viscosity
 if tstop == True:
     waves.add_equation("dz(W) - W_p = 0")
 if diffusion == True:
@@ -405,8 +402,8 @@ if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('left(Uz)=0')
 
     waves.add_bc('right(dW) = 0')
-#    waves.add_bc('right(Q)  = 0')
-    waves.add_bc('right(dQ)  = 0')
+    waves.add_bc('right(Q)  = 0')
+
 
 if (diffusion == False) and (tstop == True): 
     waves.add_bc('left(dW)=0')
@@ -415,10 +412,7 @@ if (diffusion == False) and (tstop == True):
     waves.add_bc('left(dz(Uy))=0')
     waves.add_bc('left(Uz)=0')
     
-#    waves.add_bc('right(dW) = 0')    
-#    waves.add_bc('right(dQ)=0')   
-    waves.add_bc('right(Q)  = 0')
-#    waves.add_bc('right(W)  = 0')
+    waves.add_bc('right(dW) = 0')    
 
 if (diffusion == False) and (tstop == False): #no diffusion, perfect coupling, 2 odes (standard problem)
     waves.add_bc('left(Uz)=0')
