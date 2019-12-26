@@ -10,13 +10,19 @@ process command line arguements
 '''
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", nargs='*', help="select mode number")
+parser.add_argument("--kx", nargs='*', help="select kx")
 args = parser.parse_args()
 if(args.mode):
     plot_mode = np.int(args.mode[0])
 else:
     plot_mode = 0
 
-print("plotting mode number {0:3d}".format(plot_mode))
+if(args.kx):
+    plot_kx = np.float(args.kx[0])
+else:
+    plot_kx = 400.0
+    
+#print("plotting mode number {0:3d}".format(plot_mode))
     
 '''
 read in one-fluid data 
@@ -42,14 +48,19 @@ with h5py.File('stratsi_1fluid_modes.h5','r') as infile:
     eig_Uy.append(infile['tasks'][k_i]['eig_Uy'][:])
     eig_Uz.append(infile['tasks'][k_i]['eig_Uz'][:])
 
+if(args.mode):
+    n = plot_mode
 
-kx_1f       = ks_1f[plot_mode]
-sigma_1f    = freqs_1f[plot_mode]
-W1f         = eig_W1f[plot_mode]
-Q1f         = eig_Q1f[plot_mode]
-Ux          = eig_Ux[plot_mode]
-Uy          = eig_Uy[plot_mode]
-Uz          = eig_Uz[plot_mode]
+if(args.kx):
+    n = np.argmin(np.abs(ks_1f-plot_kx))
+    
+kx_1f       = ks_1f[n]
+sigma_1f    = freqs_1f[n]
+W1f         = eig_W1f[n]
+Q1f         = eig_Q1f[n]
+Ux          = eig_Ux[n]
+Uy          = eig_Uy[n]
+Uz          = eig_Uz[n]
 
 print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sigma_1f.real, -sigma_1f.imag))
 
@@ -83,18 +94,24 @@ with h5py.File('stratsi_modes.h5','r') as infile:
     eig_Udx.append(infile['tasks'][k_i]['eig_Udx'][:])
     eig_Udy.append(infile['tasks'][k_i]['eig_Udy'][:])
     eig_Udz.append(infile['tasks'][k_i]['eig_Udz'][:])
-    
 
-kx       = ks[plot_mode]
-sigma    = freqs[plot_mode]
-W         = eig_W[plot_mode]
-Q         = eig_Q[plot_mode]
-Ugx          = eig_Ugx[plot_mode]
-Ugy          = eig_Ugy[plot_mode]
-Ugz          = eig_Ugz[plot_mode]
-Udx          = eig_Udx[plot_mode]
-Udy          = eig_Udy[plot_mode]
-Udz          = eig_Udz[plot_mode]
+
+if(args.mode):
+    m = plot_mode
+
+if(args.kx):
+    m = np.argmin(np.abs(ks-plot_kx))
+
+kx       = ks[m]
+sigma    = freqs[m]
+W         = eig_W[m]
+Q         = eig_Q[m]
+Ugx          = eig_Ugx[m]
+Ugy          = eig_Ugy[m]
+Ugz          = eig_Ugz[m]
+Udx          = eig_Udx[m]
+Udy          = eig_Udy[m]
+Udz          = eig_Udz[m]
 
 print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sigma.real, -sigma.imag))
 

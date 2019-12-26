@@ -27,7 +27,7 @@ disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
 alpha    = 1e-5     #alpha viscosity value, assumed constant
-eta_hat  = 0.05     #dimensionless radial pressure gradient 
+eta_hat  = 0.1     #dimensionless radial pressure gradient 
 
 
 '''
@@ -52,8 +52,8 @@ mode parameters
 '''
 kx     = 400.0
 kx_min = 4000
-kx_max = 800
-nkx    = 1
+kx_max = 40
+nkx    = 100
 
 '''
 vertical resolution
@@ -72,10 +72,10 @@ backreaction  = True
 '''
 numerical options
 '''
-all_solve_dense   = True #solve for all eigenvals for all kx
-first_solve_dense = False #use the dense solver for very first eigen calc
-Neig = 10 #number of eigenvalues to get for sparse solver
-eigen_trial = 0.336815 -1j*0.020939 #trial eigenvalue
+all_solve_dense   = False #solve for all eigenvals for all kx
+first_solve_dense = True #use the dense solver for very first eigen calc
+Neig = 5 #number of eigenvalues to get for sparse solver
+eigen_trial =9.515385e-2+4.253741e-3*1j #0.336815 -1j*0.020939 #trial eigenvalue
 sig_filter = 1e10 #mode filter, only allow |sigma| < sig_filter
 
 '''
