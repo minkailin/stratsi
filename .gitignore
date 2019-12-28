@@ -3,3 +3,10 @@
 *.pdf
 disk.py
 scratch*
+plot_waves.py
+.DS_Store
+__pycache__/
+stratsi.py.1
+stratsi.zip
+stratsi_params.pyc
+run_problem.sh
