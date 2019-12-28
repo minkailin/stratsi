@@ -51,14 +51,14 @@ nz_vert = 1024
 mode parameters
 '''
 kx     = 400.0
-kx_min = 4000
-kx_max = 40
+kx_min = 8000
+kx_max = 1e2
 nkx    = 100
 
 '''
 vertical resolution
 '''
-nz_waves = 128
+nz_waves = 256
 
 '''
 physics options 
@@ -75,7 +75,7 @@ numerical options
 all_solve_dense   = False #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 5 #number of eigenvalues to get for sparse solver
-eigen_trial =9.515385e-2+4.253741e-3*1j #0.336815 -1j*0.020939 #trial eigenvalue
+eigen_trial = 0.095961+0.008517*1j #0.336815 -1j*0.020939 #trial eigenvalue
 sig_filter = 1e10 #mode filter, only allow |sigma| < sig_filter
 
 '''
