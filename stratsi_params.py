@@ -34,7 +34,7 @@ eta_hat  = 0.1     #dimensionless radial pressure gradient
 dust parameters
 '''
 dg0      = 2.0     #midplane d/g ratio
-metal    = 0.02    #metallicity  
+metal    = 0.03    #metallicity  
 stokes   = 1e-3    #assume a constant stokes number throughout 
 
 delta    = alpha*(1.0 + stokes + 4.0*stokes*stokes)/(1.0+stokes*stokes)**2
@@ -51,9 +51,9 @@ nz_vert = 1024
 mode parameters
 '''
 kx     = 400.0
-kx_min = 8000
-kx_max = 1e2
-nkx    = 100
+kx_min = 100
+kx_max = 1e3
+nkx    = 10
 
 '''
 vertical resolution
@@ -72,7 +72,7 @@ backreaction  = True
 '''
 numerical options
 '''
-all_solve_dense   = False #solve for all eigenvals for all kx
+all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 5 #number of eigenvalues to get for sparse solver
 eigen_trial = 0.095961+0.008517*1j #0.336815 -1j*0.020939 #trial eigenvalue
