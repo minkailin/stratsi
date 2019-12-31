@@ -127,7 +127,7 @@ cmap    = plt.cm.inferno
 
 ymax = 1
 xmin = 0.0
-xmax = zmax
+xmax = np.amax(np.array(zmax, zmax_1f))
 
 '''
 plot eigenfunctions
