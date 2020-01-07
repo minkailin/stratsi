@@ -127,7 +127,7 @@ cmap    = plt.cm.inferno
 
 ymax = 1
 xmin = 0.0
-xmax = zmax
+xmax = np.amax(np.array(zmax, zmax_1f))
 
 '''
 plot eigenfunctions
@@ -230,4 +230,42 @@ plt.yticks(fontsize=fontsize,weight='bold')
 plt.ylabel(r'$|\delta\epsilon/\epsilon|$', fontsize=fontsize)
 
 fname = 'stratsi_plot_Q'
+plt.savefig(fname,dpi=150)
+
+#########################################################################################################
+'''
+compare vz to horizontal velocities
+'''
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+plt.xlim(xmin,xmax)
+#plt.ylim(0,ymax)
+
+theta_1f_vert = np.abs(Uz)/np.amax(abs(Uz))
+theta_1f_horz = np.sqrt(np.abs(Ux)**2 + np.abs(Uy)**2)/np.amax(abs(Uz))
+plt.plot(z_1f, theta_1f_vert, linewidth=2, label=r'one-fluid, $v_z$')
+plt.plot(z_1f, theta_1f_horz, linewidth=2, label=r'one-fluid, $v_{x,y}$')
+
+plt.gca().set_prop_cycle(None)
+
+theta_vert = np.abs(Udz)/np.amax(abs(Udz))
+theta_horz = np.sqrt(np.abs(Udx)**2 + np.abs(Udy)**2)/np.amax(abs(Udz))
+plt.plot(z, theta_vert, linewidth=2, label=r'two-fluid, $v_{dz}$', linestyle='dashed')
+plt.plot(z, theta_horz, linewidth=2, label=r'two-fluid, $v_{dx,dy}$', linestyle='dashed')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+#plt.ylabel(r'$\theta$', fontsize=fontsize)
+
+fname = 'stratsi_plot_theta'
 plt.savefig(fname,dpi=150)
