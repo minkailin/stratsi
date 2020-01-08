@@ -85,11 +85,14 @@ if viscosity_eqm == False:
 
 '''
 dust equations
-the quadratic terms in vdust are small, they don't make a practical difference.
 ''' 
-problem.add_equation("vdz_profile*dz(vdx) - 2.0*vdy + (vdx - vgx)/stokes = 0")
-problem.add_equation("vdz_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/stokes = 0")
-    
+if nonlinear_eqm == True:
+    problem.add_equation("vdz_profile*dz(vdx) - 2.0*vdy + (vdx - vgx)/stokes = 0")
+    problem.add_equation("vdz_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/stokes = 0")
+else:
+    problem.add_equation("-2.0*vdy + (vdx - vgx)/stokes = 0")
+    problem.add_equation("0.5*vdx + (vdy - vgy)/stokes = 0")
+
 '''
 boundary conditions for full problem
 use analytic solution at z=infinity or where epsilon -> 0 (pure gas disk) to set vgx, vgy, vdx, vdy 
@@ -101,9 +104,10 @@ if viscosity_eqm == True: #full 2nd order ODE in gas velocities
     problem.add_bc("left(vgy_prime)      = 0")
     problem.add_bc("right(vgx)           = 0")
     problem.add_bc("right(vgy)           =-eta_hat")
-    
-problem.add_bc("right(vdx)            = -2.0*stokes*eta_hat/(1.0 + stokes**2.0)")
-problem.add_bc("right(vdy)            = -eta_hat/(1.0 + stokes**2.0)")
+
+if nonlinear_eqm == True:
+    problem.add_bc("right(vdx)            = -2.0*stokes*eta_hat/(1.0 + stokes**2.0)")
+    problem.add_bc("right(vdy)            = -eta_hat/(1.0 + stokes**2.0)")
 
 '''
 build problem and solver
@@ -208,3 +212,104 @@ output_file['vgy'] = vgy['g']
 output_file['vdx'] = vdx['g']
 output_file['vdy'] = vdy['g']
 output_file.close()
+
+'''
+plot equilibrium profiles
+'''
+
+dg      = epsilon(zaxis)
+gasdens = rhog(zaxis)
+vzdust  = vdz(zaxis)
+buoyancy= Nz2(zaxis)
+
+fontsize= 24
+nlev    = 128
+nclev   = 6
+cmap    = plt.cm.inferno
+
+plt.rc('font',size=fontsize/1.5,weight='bold')
+#plt.rcParams["axes.labelweight"] = "bold"
+#plt.rcParams["font.weight"] = "bold"
+#plt.rcParams["font.size"] = fontsize
+
+fig, axs = plt.subplots(5, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,7.5))
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.125)
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
+
+axs[0].plot(zaxis, dg, linewidth=2, label=r'dust/gas ratio')
+axs[0].plot(zaxis,  buoyancy, linewidth=2, label=r'buoyancy', color='black')
+#axs[0].set_ylim(0,np.amax([np.amax(dg),np.amax(buoyancy)]))
+axs[0].set_ylabel(r'$\epsilon, N_z^2/\Omega^2$')
+lines1, labels1 = axs[0].get_legend_handles_labels()
+axs[0].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+axs[1].plot(zaxis, gasdens, linewidth=2)
+axs[1].set_ylabel(r'$\rho_g/\rho_{g0}$')
+
+axs[2].plot(zaxis, vzdust, linewidth=2)
+axs[2].set_ylabel(r'$v_{dz}/c_s$')
+
+axs[3].plot(zaxis, vdx['g'], linewidth=2,label=r'dust')
+axs[3].plot(zaxis, vgx['g'], linewidth=2,label=r'gas',linestyle='dashed')
+axs[3].set_ylabel(r'$v_{x}/c_s$')
+lines1, labels1 = axs[3].get_legend_handles_labels()
+axs[3].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+axs[4].plot(zaxis, vdy['g'], linewidth=2,label=r'dust')
+axs[4].plot(zaxis, vgy['g'], linewidth=2,label=r'gas',linestyle='dashed')
+axs[4].set_ylabel(r'$v_{y}/c_s$')
+lines1, labels1 = axs[4].get_legend_handles_labels()
+axs[4].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')
+
+#plt.xticks(f,weight='bold')
+plt.xlim(zmin,zmax)
+
+fname = 'stratsi_eqm'
+plt.savefig(fname,dpi=150)
+
+'''
+plot relative drift betweeb dust and gas
+'''
+
+fig, axs = plt.subplots(2, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,3))
+plt.subplots_adjust(left=0.18, right=0.95, top=0.91, bottom=0.21)
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
+
+axs[0].plot(zaxis, (vdx['g']-vgx['g'])*1e3, linewidth=2)
+axs[0].set_ylabel(r'$10^3\Delta v_{x}/c_s$')
+#lines1, labels1 = axs[3].get_legend_handles_labels()
+#axs[3].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+axs[1].plot(zaxis, (vdy['g'] - vgy['g'])*1e3, linewidth=2)
+axs[1].set_ylabel(r'$10^3\Delta v_{y}/c_s$')
+axs[1].set_xlabel(r'$z/H_g$',fontweight='bold')
+
+#plt.xticks(f,weight='bold')
+plt.xlim(zmin,zmax)
+
+fname = 'stratsi_eqm_drift'
+plt.savefig(fname,dpi=150)
+
+'''
+plot relative center of mass velocity
+'''
+
+fig, axs = plt.subplots(2, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,3))
+plt.subplots_adjust(left=0.18, right=0.95, top=0.91, bottom=0.21)
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
+
+axs[0].plot(zaxis, (dg*vdx['g']+vgx['g'])/(1.0+dg), linewidth=2)
+axs[0].set_ylabel(r'$v_{xc}/c_s$')
+
+axs[1].plot(zaxis, (dg*vdy['g']+vgy['g'])/(1.0+dg), linewidth=2)
+axs[1].set_ylabel(r'$v_{yc}/c_s$')
+axs[1].set_xlabel(r'$z/H_g$',fontweight='bold')
+
+plt.xlim(zmin,zmax)
+
+fname = 'stratsi_eqm_cen'
+plt.savefig(fname,dpi=150)

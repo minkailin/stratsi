@@ -26,8 +26,8 @@ comm = MPI.COMM_WORLD
 disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
-alpha    = 1e-5     #alpha viscosity value, assumed constant
-eta_hat  = 0.1     #dimensionless radial pressure gradient 
+alpha    = 1e-6     #alpha viscosity value, assumed constant
+eta_hat  = 0.05     #dimensionless radial pressure gradient 
 
 
 '''
@@ -35,7 +35,7 @@ dust parameters
 '''
 dg0      = 2.0     #midplane d/g ratio
 metal    = 0.03    #metallicity  
-stokes   = 1e-3    #assume a constant stokes number throughout 
+stokes   = 1e-2    #assume a constant stokes number throughout 
 
 delta    = alpha*(1.0 + stokes + 4.0*stokes*stokes)/(1.0+stokes*stokes)**2
 beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
@@ -44,21 +44,21 @@ beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
 grid parameters
 '''
 zmin    = 0.0
-zmax    = 0.5
+zmax    = 0.1
 nz_vert = 1024
 
 '''
 mode parameters
 '''
 kx     = 400.0
-kx_min = 100
+kx_min = 400
 kx_max = 1e3
-nkx    = 10
+nkx    = 1
 
 '''
 vertical resolution
 '''
-nz_waves = 256
+nz_waves =  256
 
 '''
 physics options 
@@ -68,14 +68,16 @@ viscosity_eqm = False
 viscosity_pert= False
 diffusion     = True
 backreaction  = True
+#include non-linear terms when solving for eqm vx and vy?
+nonlinear_eqm = False
 
 '''
 numerical options
 '''
-all_solve_dense   = True #solve for all eigenvals for all kx
+all_solve_dense   = False #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 5 #number of eigenvalues to get for sparse solver
-eigen_trial = 0.095961+0.008517*1j #0.336815 -1j*0.020939 #trial eigenvalue
+eigen_trial = 3.996957e-1 -1.075049e-1*1j #0.336815 -1j*0.020939 #trial eigenvalue
 sig_filter = 1e10 #mode filter, only allow |sigma| < sig_filter
 
 '''
@@ -155,9 +157,13 @@ def get_dg0_from_metal():
     sol     = broyden1(metallicity_error,[dgguess],f_tol=1e-16)
     return sol[0]
 
+def Nz2(z):
+    eps  = epsilon(z)
+    deps = depsilon(z)
+    dlnP = dln_rhog(z) #isothermal gas 
+
+    return dlnP*deps/(1.0+eps)**2
+
 if fix_metal == True:
     dg0 = get_dg0_from_metal()
     print("adjust midplane d/g={0:4.2f} to satisfy Z={1:4.2f}".format(dg0, metal))
-
-#print(epsilon(0.0))    
-#print("dg0=",dg0)

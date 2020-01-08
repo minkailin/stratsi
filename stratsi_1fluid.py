@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 100
+kx_min = 400
 kx_max = 1e3
-nkx    = 100
+nkx    = 1
 
 '''
 physics options 
@@ -55,14 +55,14 @@ tstop        = True
 '''
 problem parameters
 '''
-alpha0    = 1e-5
-st0       = 1e-3
+alpha0    = 1e-6
+st0       = 1e-2
 dg0       = 2.0
 metal     = 0.03
-eta_hat   = 0.1
+eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.5
+zmax      = 0.1
 nz_waves  = 512
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
@@ -77,9 +77,9 @@ Diff  = delta0*cs*Hgas
 numerical options
 '''
 all_solve_dense   = False #solve for all eigenvals for all kx
-first_solve_dense = False #use the dense solver for very first eigen calc
+first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
-eigen_trial = 4.132940e-3 -9.962875e-1*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
+eigen_trial = 3.921629e-1 - 1.077498e-1*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
 sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
 
 '''
