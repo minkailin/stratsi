@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400
+kx_min = 4000
 kx_max = 1e3
 nkx    = 1
 
@@ -55,15 +55,15 @@ tstop        = True
 '''
 problem parameters
 '''
-alpha0    = 1e-6
-st0       = 1e-2
+alpha0    = 1e-5
+st0       = 1e-3
 dg0       = 2.0
 metal     = 0.03
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.1
-nz_waves  = 512
+zmax      = 0.5
+nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -78,8 +78,8 @@ numerical options
 '''
 all_solve_dense   = False #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
-Neig = 10 #number of eigenvalues to get for sparse solver
-eigen_trial = 3.921629e-1 - 1.077498e-1*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
+Neig = 5 #number of eigenvalues to get for sparse solver
+eigen_trial = 3.443389841773668e-1 + 1.163124355733028e0*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
 sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
 
 '''
@@ -111,6 +111,11 @@ def d2epsilon_eqm(z):
     deps    = depsilon_eqm(z)
     dln_eps = dln_epsilon_eqm(z)
     return deps*dln_eps + eps*d2ln_epsilon_eqm(z)
+
+def P_eqm(z):
+    eps = epsilon_eqm(z)
+    x = Diff*(eps - dg0)/tau_s/cs/cs - 0.5*z*z/Hgas/Hgas 
+    return np.exp(x)
 
 def dln_P_eqm(z):
     eps = epsilon_eqm(z)
@@ -168,6 +173,28 @@ def dvy_eqm(z):
     eps = epsilon_eqm(z)
     deps = depsilon_eqm(z) 
     return eta_hat*cs*deps/(1.0+eps)/(1.0+eps)
+
+def d2vy_eqm(z):
+    eps  = epsilon_eqm(z)
+    deps = depsilon_eqm(z)
+    d2eps= d2epsilon_eqm(z)
+    result = d2eps*(1.0+eps)-2.0*deps*deps
+    result/= (1.0+eps)**3.0
+    result*= eta_hat*cs
+    return result 
+
+def vx_eqm(z):
+    vz  = vz_eqm(z)
+    dvy = dvy_eqm(z)
+    return -2.0*vz*dvy/Omega
+
+def dvx_eqm(z):
+    vz  = vz_eqm(z)
+    dvz = dvz_eqm(z)
+    dvy = dvy_eqm(z)
+    d2vy= d2vy_eqm(z)
+    return -2.0*(dvz*dvy + vz*d2vy)/Omega
+
 
 def integrand_rhog(z, dg):
     temp = z*z/2.0 - (Diff*dg/(Omega*Omega*tau_s))*(np.exp(-0.5*Omega*Omega*z*z*tau_s/Diff) - 1.0)
@@ -250,6 +277,9 @@ dvz0    = domain_EVP.new_field()
 vy0     = domain_EVP.new_field()
 dvy0    = domain_EVP.new_field()
 
+vx0     = domain_EVP.new_field()
+dvx0    = domain_EVP.new_field()
+
 epsilon0['g']     = epsilon_eqm(z)
 fd0['g']          = epsilon_eqm(z)/(1.0+epsilon_eqm(z))
 depsilon0['g']    = depsilon_eqm(z)
@@ -270,6 +300,9 @@ dvz0['g']   = dvz_eqm(z)
 
 vy0['g']     = vy_eqm(z)
 dvy0['g']    = dvy_eqm(z)
+
+vx0['g']     = vx_eqm(z)
+dvx0['g']    = dvx_eqm(z)
 
 '''
 constant parameters
@@ -307,6 +340,9 @@ waves.parameters['dvy0']            = dvy0
 waves.parameters['vz0']           = vz0
 waves.parameters['dvz0']          = dvz0
 
+waves.parameters['vx0']           = vx0
+waves.parameters['dvx0']          = dvx0
+
 '''
 substitutions 
 '''
@@ -330,9 +366,9 @@ waves.substitutions['delta_ln_rhod_p'] = "dW + dQ"
     
 #continuity equation
 if tstop == True:
-    waves.substitutions['mass_LHS']="sigma*delta_ln_rho + ikx*Ux + dln_rho0*(Uz + vz0*delta_ln_rho) + vz0*delta_ln_rho_p + dvz0*delta_ln_rho + dz(Uz)"
+    waves.substitutions['mass_LHS']="sigma*delta_ln_rho + ikx*Ux + ikx*delta_ln_rho*vx0 + dln_rho0*(Uz + vz0*delta_ln_rho) + vz0*delta_ln_rho_p + dvz0*delta_ln_rho + dz(Uz)"
 if tstop == False:
-    waves.substitutions['mass_LHS']="sigma*delta_ln_rho + ikx*Ux + dln_rho0*Uz + dz(Uz)"
+    waves.substitutions['mass_LHS']="sigma*delta_ln_rho + ikx*Ux + ikx*delta_ln_rho*vx0 + dln_rho0*Uz + dz(Uz)"
 
 if diffusion == True:
    waves.substitutions['mass_RHS']="Diff*fd0*(-kx*kx*Q + dln_rhod0*(delta_ln_rhod*dln_epsilon0 + dQ) + delta_ln_rhod_p*dln_epsilon0 + delta_ln_rhod*d2ln_epsilon0 + dz(dQ))"
@@ -345,9 +381,9 @@ waves.substitutions['delta_ln_K']  = "delta_ln_g + W"
 waves.substitutions['delta_ln_K_p']= "-2*depsilon0*Q/(1+epsilon0)/(1+epsilon0) + (1-epsilon0)*dQ/(1+epsilon0) + dW"
 
 if tstop == True:
-    waves.substitutions['energy_LHS']="sigma*W + ikx*Ux + dln_P0*(vz0*W + Uz) + vz0*dW + dvz0*W + dz(Uz)"
+    waves.substitutions['energy_LHS']="sigma*W + ikx*Ux + ikx*W*vx0 + dln_P0*(vz0*W + Uz) + vz0*dW + dvz0*W + dz(Uz)"
 if tstop == False:
-    waves.substitutions['energy_LHS']="sigma*(W - delta_ln_rho) + (dln_P0-dln_rho0)*Uz"
+    waves.substitutions['energy_LHS']="sigma*(W - delta_ln_rho) + ikx*vx0*(W - delta_ln_rho) + (dln_P0-dln_rho0)*Uz"
 
 if tstop == True:
     waves.substitutions['energy_RHS1']="K_over_P0*(dz(dW) + delta_ln_K_p*dln_P0 + delta_ln_K*d2ln_P0 + dln_K0*(delta_ln_K*dln_P0 + W_p) - kx*kx*W)"
@@ -359,23 +395,23 @@ if tstop == False:
 #x-mom equation
 waves.substitutions['P_over_rho'] = "cs*cs/(1+epsilon0)"
 if tstop == True:
-    waves.substitutions['xmom_LHS']="sigma*Ux + vz0*dz(Ux)"
+    waves.substitutions['xmom_LHS']="sigma*Ux + dvx0*Uz + ikx*vx0*Ux + vz0*dz(Ux)"
 if tstop == False:
-    waves.substitutions['xmom_LHS']="sigma*Ux"
+    waves.substitutions['xmom_LHS']="sigma*Ux + dvx0*Uz + ikx*vx0*Ux"
 waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega/(1+epsilon0)*delta_ln_rho + 2*Omega*Uy" #this should be used with ***
 
 #y-mom equation
 if tstop == True:
-    waves.substitutions['ymom_LHS']="sigma*Uy + dvy0*Uz + vz0*dz(Uy)"
+    waves.substitutions['ymom_LHS']="sigma*Uy + ikx*vx0*Uy + dvy0*Uz + vz0*dz(Uy)"
 if tstop == False:
-    waves.substitutions['ymom_LHS']="sigma*Uy"
+    waves.substitutions['ymom_LHS']="sigma*Uy + ikx*vx0*Uy"
 waves.substitutions['ymom_RHS']="-0.5*Omega*Ux"
 
 #z-mom
 if tstop == True:
-    waves.substitutions['zmom_LHS']="sigma*Uz + dvz0*Uz + vz0*dz(Uz)"
+    waves.substitutions['zmom_LHS']="sigma*Uz + ikx*vx0*Uz + dvz0*Uz + vz0*dz(Uz)"
 if tstop == False:
-    waves.substitutions['zmom_LHS']="sigma*Uz"
+    waves.substitutions['zmom_LHS']="sigma*Uz + ikx*vx0*Uz"
 waves.substitutions['zmom_RHS']="P_over_rho*(dln_P0*epsilon0*Q/(1+epsilon0) - dW)"
 
 #primary equations
@@ -547,16 +583,53 @@ with h5py.File('stratsi_1fluid_modes.h5','w') as outfile:
 '''
 plot equilibrium profiles
 '''
+    
+zaxis = domain_EVP.grid(0, scales=nz_out)
+eps = epsilon_eqm(zaxis)
+rhog= P_eqm(zaxis)
+Nz2 = Nz2_eqm(zaxis)
+vz  = vz_eqm(zaxis)
+vy  = vy_eqm(zaxis)
+vx  = vx_eqm(zaxis)
+
 
 fontsize= 24
 nlev    = 128
 nclev   = 6
 cmap    = plt.cm.inferno
-    
-z = domain_EVP.grid(0, scales=nz_out)
-eps = epsilon_eqm(z)
-Nz2 = Nz2_eqm(z)
 
+plt.rc('font',size=fontsize/1.5,weight='bold')
+
+fig, axs = plt.subplots(5, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,7.5))
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.125)
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, st0, delta0)
+plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
+
+axs[0].plot(zaxis, eps, linewidth=2, label=r'dust/gas ratio')
+axs[0].plot(zaxis,  Nz2, linewidth=2, label=r'buoyancy', color='black')
+axs[0].set_ylabel(r'$\epsilon, N_z^2/\Omega^2$')
+lines1, labels1 = axs[0].get_legend_handles_labels()
+axs[0].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+axs[1].plot(zaxis, rhog, linewidth=2)
+axs[1].set_ylabel(r'$\rho_g/\rho_{g0}$')
+
+axs[2].plot(zaxis, vz, linewidth=2)
+axs[2].set_ylabel(r'$v_{zc}/c_s$')
+
+axs[3].plot(zaxis, vx, linewidth=2)
+axs[3].set_ylabel(r'$v_{xc}/c_s$')
+
+axs[4].plot(zaxis, vy, linewidth=2,label=r'dust')
+axs[4].set_ylabel(r'$v_{yc}/c_s$')
+axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')
+
+plt.xlim(zmin,zmax)
+
+fname = 'stratsi_1fluid_eqm'
+plt.savefig(fname,dpi=150)
+
+'''
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
@@ -584,3 +657,4 @@ plt.ylabel(r'$\rho_d/\rho_g$', fontsize=fontsize)
 
 fname = 'stratsi_1fluid_epsilon'
 plt.savefig(fname,dpi=150)
+'''

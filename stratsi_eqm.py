@@ -85,14 +85,11 @@ if viscosity_eqm == False:
 
 '''
 dust equations
-''' 
-if nonlinear_eqm == True:
-    problem.add_equation("vdz_profile*dz(vdx) - 2.0*vdy + (vdx - vgx)/stokes = 0")
-    problem.add_equation("vdz_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/stokes = 0")
-else:
-    problem.add_equation("-2.0*vdy + (vdx - vgx)/stokes = 0")
-    problem.add_equation("0.5*vdx + (vdy - vgy)/stokes = 0")
-
+'''
+problem.add_equation("vdz_profile*dz(vdx) - 2.0*vdy + (vdx - vgx)/stokes = 0")
+problem.add_equation("vdz_profile*dz(vdy) + 0.5*vdx + (vdy - vgy)/stokes = 0")
+  
+    
 '''
 boundary conditions for full problem
 use analytic solution at z=infinity or where epsilon -> 0 (pure gas disk) to set vgx, vgy, vdx, vdy 
@@ -105,10 +102,9 @@ if viscosity_eqm == True: #full 2nd order ODE in gas velocities
     problem.add_bc("right(vgx)           = 0")
     problem.add_bc("right(vgy)           =-eta_hat")
 
-if nonlinear_eqm == True:
-    problem.add_bc("right(vdx)            = -2.0*stokes*eta_hat/(1.0 + stokes**2.0)")
-    problem.add_bc("right(vdy)            = -eta_hat/(1.0 + stokes**2.0)")
-
+problem.add_bc("right(vdx)            = -2.0*stokes*eta_hat/(1.0 + stokes**2.0)")
+problem.add_bc("right(vdy)            = -eta_hat/(1.0 + stokes**2.0)")
+ 
 '''
 build problem and solver
 '''
