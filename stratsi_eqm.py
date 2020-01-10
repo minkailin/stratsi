@@ -218,6 +218,9 @@ gasdens = rhog(zaxis)
 vzdust  = vdz(zaxis)
 buoyancy= Nz2(zaxis)
 
+vxc = (dg*vdx['g']+vgx['g'])/(1.0+dg)
+vyc = (dg*vdy['g']+vgy['g'])/(1.0+dg)
+
 fontsize= 24
 nlev    = 128
 nclev   = 6
@@ -234,11 +237,11 @@ title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
 plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 
 axs[0].plot(zaxis, dg, linewidth=2, label=r'dust/gas ratio')
-axs[0].plot(zaxis,  buoyancy, linewidth=2, label=r'buoyancy', color='black')
+#axs[0].plot(zaxis,  buoyancy, linewidth=2, label=r'buoyancy', color='black')
 #axs[0].set_ylim(0,np.amax([np.amax(dg),np.amax(buoyancy)]))
-axs[0].set_ylabel(r'$\epsilon, N_z^2/\Omega^2$')
-lines1, labels1 = axs[0].get_legend_handles_labels()
-axs[0].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+axs[0].set_ylabel(r'$\rho_d/\rho_g$')
+#lines1, labels1 = axs[0].get_legend_handles_labels()
+#axs[0].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
 axs[1].plot(zaxis, gasdens, linewidth=2)
 axs[1].set_ylabel(r'$\rho_g/\rho_{g0}$')
@@ -298,10 +301,10 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.91, bottom=0.21)
 title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
 plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 
-axs[0].plot(zaxis, (dg*vdx['g']+vgx['g'])/(1.0+dg), linewidth=2)
+axs[0].plot(zaxis, vxc, linewidth=2)
 axs[0].set_ylabel(r'$v_{xc}/c_s$')
 
-axs[1].plot(zaxis, (dg*vdy['g']+vgy['g'])/(1.0+dg), linewidth=2)
+axs[1].plot(zaxis, vyc, linewidth=2)
 axs[1].set_ylabel(r'$v_{yc}/c_s$')
 axs[1].set_xlabel(r'$z/H_g$',fontweight='bold')
 

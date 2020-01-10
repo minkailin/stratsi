@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 4000
+kx_min = 8000
 kx_max = 1e3
 nkx    = 1
 
@@ -49,20 +49,24 @@ physics options
 can choose to include/exclude particle diffusion, 
 '''
 fix_metal    = True
-diffusion    = True
 tstop        = True
+diffusion    = True
+
+if((tstop == False) and (diffusion == True)):
+        print("can't have tstop=False AND diffusion=True, abort")
+        exit()
 
 '''
 problem parameters
 '''
-alpha0    = 1e-5
-st0       = 1e-3
+alpha0    = 2e-9
+st0       = 1e-2
 dg0       = 2.0
-metal     = 0.03
+metal     = 0.00135
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.5
+zmax      = 0.005
 nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
@@ -245,8 +249,6 @@ if (diffusion == True) and (tstop == True): #full problem
     waves = de.EVP(domain_EVP, ['W','W_p','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma')
 if (diffusion == False) and (tstop == True):
     waves = de.EVP(domain_EVP, ['W','W_p','Q','Ux','Uy','Uz'], eigenvalue='sigma')
-if (diffusion == True) and (tstop == False):
-    waves = de.EVP(domain_EVP, ['W','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma')
 if (diffusion == False) and (tstop == False): 
     waves = de.EVP(domain_EVP, ['W','Q','Ux','Uy','Uz'], eigenvalue='sigma')
 
@@ -368,7 +370,7 @@ waves.substitutions['delta_ln_rhod_p'] = "dW + dQ"
 if tstop == True:
     waves.substitutions['mass_LHS']="sigma*delta_ln_rho + ikx*Ux + ikx*delta_ln_rho*vx0 + dln_rho0*(Uz + vz0*delta_ln_rho) + vz0*delta_ln_rho_p + dvz0*delta_ln_rho + dz(Uz)"
 if tstop == False:
-    waves.substitutions['mass_LHS']="sigma*delta_ln_rho + ikx*Ux + ikx*delta_ln_rho*vx0 + dln_rho0*Uz + dz(Uz)"
+    waves.substitutions['mass_LHS']="sigma*delta_ln_rho + ikx*Ux + dln_rho0*Uz + dz(Uz)"
 
 if diffusion == True:
    waves.substitutions['mass_RHS']="Diff*fd0*(-kx*kx*Q + dln_rhod0*(delta_ln_rhod*dln_epsilon0 + dQ) + delta_ln_rhod_p*dln_epsilon0 + delta_ln_rhod*d2ln_epsilon0 + dz(dQ))"
@@ -383,35 +385,35 @@ waves.substitutions['delta_ln_K_p']= "-2*depsilon0*Q/(1+epsilon0)/(1+epsilon0) +
 if tstop == True:
     waves.substitutions['energy_LHS']="sigma*W + ikx*Ux + ikx*W*vx0 + dln_P0*(vz0*W + Uz) + vz0*dW + dvz0*W + dz(Uz)"
 if tstop == False:
-    waves.substitutions['energy_LHS']="sigma*(W - delta_ln_rho) + ikx*vx0*(W - delta_ln_rho) + (dln_P0-dln_rho0)*Uz"
+    waves.substitutions['energy_LHS']="sigma*(W - delta_ln_rho) + (dln_P0-dln_rho0)*Uz"
 
 if tstop == True:
     waves.substitutions['energy_RHS1']="K_over_P0*(dz(dW) + delta_ln_K_p*dln_P0 + delta_ln_K*d2ln_P0 + dln_K0*(delta_ln_K*dln_P0 + W_p) - kx*kx*W)"
     waves.substitutions['energy_RHS2']="-2*eta_hat*cs*Omega*tau_s*epsilon0/(1+epsilon0)/(1+epsilon0)*ikx*delta_ln_g" #this should be used with ***
     waves.substitutions['energy_RHS']="energy_RHS1 + energy_RHS2"
 if tstop == False:
-    waves.substitutions['energy_RHS']="0"
+    waves.substitutions['energy_RHS']="0" #this requires diffusion = 0 
     
 #x-mom equation
 waves.substitutions['P_over_rho'] = "cs*cs/(1+epsilon0)"
 if tstop == True:
     waves.substitutions['xmom_LHS']="sigma*Ux + dvx0*Uz + ikx*vx0*Ux + vz0*dz(Ux)"
 if tstop == False:
-    waves.substitutions['xmom_LHS']="sigma*Ux + dvx0*Uz + ikx*vx0*Ux"
+    waves.substitutions['xmom_LHS']="sigma*Ux"
 waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega/(1+epsilon0)*delta_ln_rho + 2*Omega*Uy" #this should be used with ***
 
 #y-mom equation
 if tstop == True:
     waves.substitutions['ymom_LHS']="sigma*Uy + ikx*vx0*Uy + dvy0*Uz + vz0*dz(Uy)"
 if tstop == False:
-    waves.substitutions['ymom_LHS']="sigma*Uy + ikx*vx0*Uy"
+    waves.substitutions['ymom_LHS']="sigma*Uy + dvy0*Uz"
 waves.substitutions['ymom_RHS']="-0.5*Omega*Ux"
 
 #z-mom
 if tstop == True:
     waves.substitutions['zmom_LHS']="sigma*Uz + ikx*vx0*Uz + dvz0*Uz + vz0*dz(Uz)"
 if tstop == False:
-    waves.substitutions['zmom_LHS']="sigma*Uz + ikx*vx0*Uz"
+    waves.substitutions['zmom_LHS']="sigma*Uz"
 waves.substitutions['zmom_RHS']="P_over_rho*(dln_P0*epsilon0*Q/(1+epsilon0) - dW)"
 
 #primary equations
@@ -441,7 +443,7 @@ if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('right(Q)  = 0')
 
 
-if (diffusion == False) and (tstop == True): 
+if (diffusion == False) and (tstop == True): #finite coupling, without diffusion, 6 odes 
     waves.add_bc('left(dW)=0')
     waves.add_bc('left(dQ)=0')
     waves.add_bc('left(dz(Ux))=0')
@@ -454,12 +456,6 @@ if (diffusion == False) and (tstop == False): #no diffusion, perfect coupling, 2
     waves.add_bc('left(Uz)=0')
     waves.add_bc('right(Uz) = 0')
     
-if (diffusion == True) and (tstop == False):
-    waves.add_bc('left(dW)=0')
-    waves.add_bc('left(Uz)=0')
-    waves.add_bc('right(Uz) = 0')
-
-
 '''
 eigenvalue problem, sweep through kx space
 for each kx, filter modes and keep most unstable one
@@ -590,6 +586,7 @@ rhog= P_eqm(zaxis)
 Nz2 = Nz2_eqm(zaxis)
 vz  = vz_eqm(zaxis)
 vy  = vy_eqm(zaxis)
+dvy = dvy_eqm(zaxis)
 vx  = vx_eqm(zaxis)
 
 
@@ -606,10 +603,7 @@ title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, st0, delta0)
 plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 
 axs[0].plot(zaxis, eps, linewidth=2, label=r'dust/gas ratio')
-axs[0].plot(zaxis,  Nz2, linewidth=2, label=r'buoyancy', color='black')
-axs[0].set_ylabel(r'$\epsilon, N_z^2/\Omega^2$')
-lines1, labels1 = axs[0].get_legend_handles_labels()
-axs[0].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+axs[0].set_ylabel(r'$\rho_d/\rho_g$')
 
 axs[1].plot(zaxis, rhog, linewidth=2)
 axs[1].set_ylabel(r'$\rho_g/\rho_{g0}$')
@@ -630,31 +624,28 @@ fname = 'stratsi_1fluid_eqm'
 plt.savefig(fname,dpi=150)
 
 '''
+compare vertical shear to buoyancy
+'''
+
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
-ymax = np.around(np.amax(eps),decimals=1)
-
 plt.xlim(zmin,zmax)
-plt.ylim(0,ymax)
 
-plt.plot(z, eps, linewidth=2)
-plt.plot(z, Nz2, linewidth=2)
-
-#plt.plot(np.array([0,1]),np.array([1,1]),linewidth=2)
+plt.plot(zaxis, np.abs(2.0*Omega*dvy), linewidth=2,label='vertical shear')
+plt.plot(zaxis, Nz2, linewidth=2,label='buoyancy')
 
 plt.rc('font',size=fontsize,weight='bold')
 
-#lines1, labels1 = ax.get_legend_handles_labels()
-#legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
 
 plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\rho_d/\rho_g$', fontsize=fontsize)
+plt.ylabel(r'$r\frac{d\Omega^2}{dz}, N_z^2$', fontsize=fontsize)
 
-fname = 'stratsi_1fluid_epsilon'
+fname = 'stratsi_1fluid_vshear'
 plt.savefig(fname,dpi=150)
-'''
