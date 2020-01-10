@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 8000
+kx_min = 4000
 kx_max = 1e3
 nkx    = 1
 
@@ -50,7 +50,7 @@ can choose to include/exclude particle diffusion,
 '''
 fix_metal    = True
 tstop        = True
-diffusion    = True
+diffusion    = False
 
 if((tstop == False) and (diffusion == True)):
         print("can't have tstop=False AND diffusion=True, abort")
@@ -59,15 +59,15 @@ if((tstop == False) and (diffusion == True)):
 '''
 problem parameters
 '''
-alpha0    = 2e-9
+alpha0    = 1e-8
 st0       = 1e-2
 dg0       = 2.0
-metal     = 0.00135
+metal     = 0.003#0.00135
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.005
-nz_waves  = 128
+zmax      = 0.01#0.005
+nz_waves  = 160
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -580,7 +580,7 @@ with h5py.File('stratsi_1fluid_modes.h5','w') as outfile:
 plot equilibrium profiles
 '''
     
-zaxis = domain_EVP.grid(0, scales=nz_out)
+zaxis = domain_EVP.grid(0, scales=out_scale)
 eps = epsilon_eqm(zaxis)
 rhog= P_eqm(zaxis)
 Nz2 = Nz2_eqm(zaxis)

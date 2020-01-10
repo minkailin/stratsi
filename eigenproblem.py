@@ -163,8 +163,8 @@ class Eigenproblem():
         for e in old_evp.equations:
             self.EVP_hires.add_equation(e['raw_equation'])
 
-        for b in old_evp.boundary_conditions:
-            self.EVP_hires.add_bc(b['raw_equation'])
+#        for b in old_evp.boundary_conditions:
+#            self.EVP_hires.add_bc(b['raw_equation'])
 
         solver = self.EVP_hires.build_solver()
         if self.sparse:
