@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
 import scipy.sparse.linalg
-
+tol = 1e-12
 class Eigenproblem():
     def __init__(self, EVP, sparse=False):
         """
@@ -28,7 +28,7 @@ class Eigenproblem():
     def process_evalues(self, ev):
         return ev[np.isfinite(ev)]
     
-    def growth_rate(self,params,reject=True, tol=1e-10, **kwargs):
+    def growth_rate(self,params,reject=True, tol=tol, **kwargs):
         """returns the growth rate, defined as the eigenvalue with the largest
         real part. May acually be a decay rate if there is no growing mode.
         
@@ -107,7 +107,7 @@ class Eigenproblem():
 
         fig.savefig('{}_spectrum_{}.png'.format(title,spectype))
 
-    def reject_spurious(self, factor=1.5, tol=1e-10):
+    def reject_spurious(self, factor=1.5, tol=tol):
         """may be able to pull everything out of EVP to construct a new one with higher N..."""
         self.factor = factor
         self.solve_hires(tol=tol)
@@ -116,7 +116,7 @@ class Eigenproblem():
         self.evalues_good_index = indx
 
         
-    def solve_hires(self, tol=1e-10):
+    def solve_hires(self, tol=tol):
         old_evp = self.EVP
         old_d = old_evp.domain
         old_x = old_d.bases[0]

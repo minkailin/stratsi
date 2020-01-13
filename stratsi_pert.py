@@ -38,16 +38,16 @@ W_p = W_primed (dW/dz)...etc
 '''
 
 if (viscosity_pert == True) and (diffusion == True):#full problem: include viscosity and particle diffusion
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
 
 if (viscosity_pert == True) and (diffusion == False):#include viscosity but no particle diffusion
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
     
 if (viscosity_pert == False) and (diffusion == True):#ignore gas viscosity but include particle diffusion 
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
     
 if (viscosity_pert == False) and (diffusion == False):#ignore gas viscosity and ignore diffusion  
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
 
 
 '''

@@ -40,8 +40,8 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 4000
-kx_max = 1e3
+kx_min = 6160
+kx_max = 1e4
 nkx    = 1
 
 '''
@@ -50,7 +50,7 @@ can choose to include/exclude particle diffusion,
 '''
 fix_metal    = True
 tstop        = True
-diffusion    = False
+diffusion    = True
 
 if((tstop == False) and (diffusion == True)):
         print("can't have tstop=False AND diffusion=True, abort")
@@ -59,15 +59,15 @@ if((tstop == False) and (diffusion == True)):
 '''
 problem parameters
 '''
-alpha0    = 1e-8
+alpha0    = 1e-6
 st0       = 1e-2
 dg0       = 2.0
-metal     = 0.003#0.00135
+metal     = 0.03#0.00135
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.01#0.005
-nz_waves  = 160
+zmax      = 0.1#0.005
+nz_waves  = 256
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -80,11 +80,12 @@ Diff  = delta0*cs*Hgas
 '''
 numerical options
 '''
-all_solve_dense   = False #solve for all eigenvals for all kx
+all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 5 #number of eigenvalues to get for sparse solver
 eigen_trial = 3.443389841773668e-1 + 1.163124355733028e0*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
 sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
+tol = 1e-12
 
 '''
 output control
@@ -246,11 +247,11 @@ W_p = W_primed (dW/dz)...etc
 '''
 
 if (diffusion == True) and (tstop == True): #full problem
-    waves = de.EVP(domain_EVP, ['W','W_p','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','W_p','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)
 if (diffusion == False) and (tstop == True):
-    waves = de.EVP(domain_EVP, ['W','W_p','Q','Ux','Uy','Uz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','W_p','Q','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)
 if (diffusion == False) and (tstop == False): 
-    waves = de.EVP(domain_EVP, ['W','Q','Ux','Uy','Uz'], eigenvalue='sigma')
+    waves = de.EVP(domain_EVP, ['W','Q','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)
 
 '''
 set up required vertical profiles as non-constant coefficients
@@ -439,9 +440,17 @@ if (diffusion == True) and (tstop == True): #full problem, 7 odes
     waves.add_bc('left(dz(Uy))=0')
     waves.add_bc('left(Uz)=0')
 
+#    waves.add_bc('left(W)=0')
+#    waves.add_bc('left(Q)=0')
+#    waves.add_bc('left(Ux)=0')
+#    waves.add_bc('left(Uy)=0')
+#    waves.add_bc('left(dz(Uz))=0')
+
     waves.add_bc('right(dW) = 0')
     waves.add_bc('right(Q)  = 0')
 
+#    waves.add_bc('right(W) = 0')
+#    waves.add_bc('right(dQ)  = 0')
 
 if (diffusion == False) and (tstop == True): #finite coupling, without diffusion, 6 odes 
     waves.add_bc('left(dW)=0')

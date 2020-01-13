@@ -26,14 +26,14 @@ comm = MPI.COMM_WORLD
 disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
-alpha    = 1e-8     #alpha viscosity value, assumed constant
+alpha    = 1e-6     #alpha viscosity value, assumed constant
 eta_hat  = 0.05     #dimensionless radial pressure gradient 
 
 '''
 dust parameters
 '''
 dg0      = 2.0     #midplane d/g ratio
-metal    = 0.003    #metallicity  
+metal    = 0.03    #metallicity  
 stokes   = 1e-2    #assume a constant stokes number throughout 
 
 delta    = alpha*(1.0 + stokes + 4.0*stokes*stokes)/(1.0+stokes*stokes)**2
@@ -43,21 +43,21 @@ beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
 grid parameters
 '''
 zmin    = 0.0
-zmax    = 0.01
+zmax    = 0.1
 nz_vert = 1024
 
 '''
 mode parameters
 '''
 kx     = 400.0
-kx_min = 4000
-kx_max = 1e3
-nkx    = 1
+kx_min = 100
+kx_max = 1e4
+nkx    = 20
 
 '''
 vertical resolution
 '''
-nz_waves = 160
+nz_waves = 192
 
 '''
 physics options 
@@ -65,17 +65,18 @@ physics options
 fix_metal     = True
 viscosity_eqm = False
 viscosity_pert= False
-diffusion     = False
+diffusion     = True
 backreaction  = True
 
 '''
 numerical options
 '''
-all_solve_dense   = False #solve for all eigenvals for all kx
+all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 5 #number of eigenvalues to get for sparse solver
 eigen_trial = 3.443390e-1 + 1.163127e0*1j #0.336815 -1j*0.020939 #trial eigenvalue
 sig_filter = 1e10 #mode filter, only allow |sigma| < sig_filter
+tol = 1e-12
 
 '''
 analytic vertical profiles for d/g, vdz, rhog assuming constant stokes number 

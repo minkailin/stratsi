@@ -29,7 +29,6 @@ if(args.ylim):
 numerical parameters
 '''
 ncc_cutoff = 1e-12
-tolerance  = 1e-12
 
 '''
 setup grid and problem 
@@ -243,9 +242,11 @@ axs[0].set_ylabel(r'$\rho_d/\rho_g$')
 #lines1, labels1 = axs[0].get_legend_handles_labels()
 #axs[0].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
+#plt.gca().set_prop_cycle(1)
 axs[1].plot(zaxis, gasdens, linewidth=2)
 axs[1].set_ylabel(r'$\rho_g/\rho_{g0}$')
 
+#plt.gca().set_prop_cycle(None)
 axs[2].plot(zaxis, vzdust, linewidth=2)
 axs[2].set_ylabel(r'$v_{dz}/c_s$')
 
@@ -255,8 +256,9 @@ axs[3].set_ylabel(r'$v_{x}/c_s$')
 lines1, labels1 = axs[3].get_legend_handles_labels()
 axs[3].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
+
 axs[4].plot(zaxis, vdy['g'], linewidth=2,label=r'dust')
-axs[4].plot(zaxis, vgy['g'], linewidth=2,label=r'gas',linestyle='dashed')
+axs[4].plot(zaxis, vgy['g'], linewidth=2,label=r'gas', linestyle='dashed')
 axs[4].set_ylabel(r'$v_{y}/c_s$')
 lines1, labels1 = axs[4].get_legend_handles_labels()
 axs[4].legend(lines1, labels1, loc='right', frameon=False, ncol=1)

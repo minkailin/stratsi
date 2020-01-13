@@ -130,6 +130,35 @@ xmin = 0.0
 xmax = np.amax(np.array(zmax, zmax_1f))
 
 '''
+plot eigenvalues
+'''
+plt.rc('font',size=fontsize,weight='bold')
+
+fig, axs = plt.subplots(2, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,6))
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.15)
+#plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
+plt.xscale('log')
+
+axs[0].plot(ks_1f, freqs_1f.real, marker='o', linestyle='none', markersize=10, label=r'one fluid')
+axs[0].plot(ks, freqs.real, marker='X', linestyle='none', markersize=10,label=r'two fluid')
+#axs[0].set_xscale('log')
+axs[0].set_ylabel(r'$s/\Omega$')
+lines1, labels1 = axs[0].get_legend_handles_labels()
+legend=axs[0].legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, handletextpad=-0.5)
+
+axs[1].plot(ks_1f, -freqs_1f.imag, marker='o', markersize=10,linestyle='none', label=r'one fluid')
+axs[1].plot(ks, -freqs.imag, marker='X',markersize=10,linestyle='none',  label=r'two fluid')
+axs[1].set_ylabel(r'$\omega/\Omega$')
+axs[1].set_xlabel(r'$k_xH_g$')
+lines1, labels1 = axs[1].get_legend_handles_labels()
+legend=axs[1].legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, handletextpad=-0.5)
+
+plt.xlim(np.amin(ks),np.amax(ks))
+
+fname = 'stratsi_plot_growth'
+plt.savefig(fname,dpi=150)
+
+'''
 plot eigenfunctions
 '''
 
