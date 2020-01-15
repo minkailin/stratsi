@@ -314,63 +314,16 @@ for i, kx in enumerate(kx_space):
                 trial = eigen_trial
                 EP.solve(N=Neig, target = trial)
         else:
-            trial = eigenfreq[i-1]
+            #trial = eigenfreq[i-1]
             EP.solve(N=Neig, target = trial)
 
     EP.reject_spurious()
 
     abs_sig = np.abs(EP.evalues_good)
-    sig_acceptable = abs_sig < sig_filter
+    sig_acceptable = (abs_sig < sig_filter) & (EP.evalues_good.real > 0.0)
 
     sigma      = EP.evalues_good[sig_acceptable]
     sigma_index= EP.evalues_good_index[sig_acceptable]
-        
-    if sigma.size > 0:
-        growth   =  np.real(sigma)
-        g1       =  np.argmax(growth)
-        opt_freq = sigma[g1]
-        
-        g2 = sigma_index[g1]
-        EP.solver.set_state(g2)
-        W  = EP.solver.state['W']
-        Q  = EP.solver.state['Q']
-        Ugx = EP.solver.state['Ugx']
-        Ugy = EP.solver.state['Ugy']
-        Ugz = EP.solver.state['Ugz']
-        Udx = EP.solver.state['Udx']
-        Udy = EP.solver.state['Udy']
-        Udz = EP.solver.state['Udz']
-
-        W.set_scales(scales=out_scale)
-        Q.set_scales(scales=out_scale)
-        Ugx.set_scales(scales=out_scale)
-        Ugy.set_scales(scales=out_scale)
-        Ugz.set_scales(scales=out_scale)
-        Udx.set_scales(scales=out_scale)
-        Udy.set_scales(scales=out_scale)
-        Udz.set_scales(scales=out_scale)
-
-        Wout = W['g']
-        Qout = Q['g']
-        Ugxout = Ugx['g']
-        Ugyout = Ugy['g']
-        Ugzout = Ugz['g']
-        Udxout = Udx['g']
-        Udyout = Udy['g']
-        Udzout = Udz['g']
-        
-    else:
-        opt_freq = np.nan
-        Wout   = np.zeros(nz_out)
-        Qout   =  np.zeros(nz_out)
-        Ugxout = np.zeros(nz_out)
-        Ugyout = np.zeros(nz_out)
-        Ugzout = np.zeros(nz_out)
-        Udxout = np.zeros(nz_out)
-        Udyout = np.zeros(nz_out)
-        Udzout = np.zeros(nz_out)
-        
-    eigenfreq.append(opt_freq) #store eigenfreq
 
     eigenfunc['W'].append([])
     eigenfunc['Q'].append([])
@@ -380,21 +333,62 @@ for i, kx in enumerate(kx_space):
     eigenfunc['Udx'].append([])
     eigenfunc['Udy'].append([])
     eigenfunc['Udz'].append([])
-    
-    eigenfunc['W'][i] = np.copy(Wout)
-    eigenfunc['Q'][i] = np.copy(Qout)
-    eigenfunc['Ugx'][i] = np.copy(Ugxout)
-    eigenfunc['Ugy'][i] = np.copy(Ugyout)
-    eigenfunc['Ugz'][i] = np.copy(Ugzout)
-    eigenfunc['Udx'][i] = np.copy(Udxout)
-    eigenfunc['Udy'][i] = np.copy(Udyout)
-    eigenfunc['Udz'][i] = np.copy(Udzout)
-  
+
+    if sigma.size > 0:
+        eigenfreq.append(sigma)
+        for n, mode in enumerate(sigma_index):
+            EP.solver.set_state(mode)
+        
+            W  = EP.solver.state['W']
+            Q  = EP.solver.state['Q']
+            Ugx = EP.solver.state['Ugx']
+            Ugy = EP.solver.state['Ugy']
+            Ugz = EP.solver.state['Ugz']
+            Udx = EP.solver.state['Udx']
+            Udy = EP.solver.state['Udy']
+            Udz = EP.solver.state['Udz']
+
+            W.set_scales(scales=out_scale)
+            Q.set_scales(scales=out_scale)
+            Ugx.set_scales(scales=out_scale)
+            Ugy.set_scales(scales=out_scale)
+            Ugz.set_scales(scales=out_scale)
+            Udx.set_scales(scales=out_scale)
+            Udy.set_scales(scales=out_scale)
+            Udz.set_scales(scales=out_scale)
+
+            eigenfunc['W'][i].append(W['g'])
+            eigenfunc['Q'][i].append(Q['g'])
+            eigenfunc['Ugx'][i].append(Ugx['g']) 
+            eigenfunc['Ugy'][i].append(Ugy['g']) 
+            eigenfunc['Ugz'][i].append(Ugz['g']) 
+            eigenfunc['Udx'][i].append(Udx['g'])
+            eigenfunc['Udy'][i].append(Udy['g']) 
+            eigenfunc['Udz'][i].append(Udz['g'])             
+    else:
+        eigenfreq.append(np.array([np.nan]))
+        eigenfunc['W'][i].append(np.zeros(nz_out))
+        eigenfunc['Q'][i].append(np.zeros(nz_out))
+        eigenfunc['Ugx'][i].append(np.zeros(nz_out)) 
+        eigenfunc['Ugy'][i].append(np.zeros(nz_out)) 
+        eigenfunc['Ugz'][i].append(np.zeros(nz_out)) 
+        eigenfunc['Udx'][i].append(np.zeros(nz_out))
+        eigenfunc['Udy'][i].append(np.zeros(nz_out)) 
+        eigenfunc['Udz'][i].append(np.zeros(nz_out))    
+
+
+    growth = eigenfreq[i].real
+    freq   = eigenfreq[i].imag
+    g1     =  np.argmax(growth)
+    trial  = eigenfreq[i][g1]
+        
 '''
-print results to screen
+print results to screen (most unstable mode)
 '''
 for i, kx in enumerate(kx_space):
-    print("i, kx, growth, freq = {0:3d} {1:1.2e} {2:9.6f} {3:9.6f}".format(i, kx, eigenfreq[i].real, -eigenfreq[i].imag))
+    growth = eigenfreq[i].real
+    g1     =  np.argmax(growth)
+    print("i, kx, growth, freq = {0:3d} {1:1.2e} {2:9.6f} {3:9.6f}".format(i, kx, eigenfreq[i][g1].real, -eigenfreq[i][g1].imag))
 
 '''
 data output
@@ -405,14 +399,15 @@ with h5py.File('stratsi_modes.h5','w') as outfile:
 
     scale_group = outfile.create_group('scales')
     scale_group.create_dataset('kx_space',data=kx_space)
-    scale_group.create_dataset('eig_freq',data=eigenfreq)
     scale_group.create_dataset('z',   data=z_out)
     scale_group.create_dataset('zmax', data=zmax)
 
     tasks_group = outfile.create_group('tasks')
 
-    for i, kx in enumerate(kx_space):
+    
+    for i, freq in enumerate(eigenfreq):
         data_group = tasks_group.create_group('k_{:03d}'.format(i))
+        data_group.create_dataset('freq',data=freq)
         data_group.create_dataset('eig_W',data=eigenfunc['W'][i])
         data_group.create_dataset('eig_Q',data=eigenfunc['Q'][i])
         data_group.create_dataset('eig_Ugx',data=eigenfunc['Ugx'][i])

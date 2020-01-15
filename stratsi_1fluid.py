@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1e2
+kx_min = 1e3
 kx_max = 1e4
-nkx    = 20
+nkx    = 5
 
 '''
 physics options 
@@ -67,7 +67,7 @@ eta_hat   = 0.05
 
 zmin      = 0
 zmax      = 0.5#0.005
-nz_waves  = 256
+nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -84,7 +84,7 @@ all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 5 #number of eigenvalues to get for sparse solver
 eigen_trial = 3.443389841773668e-1 + 1.163124355733028e0*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
-sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
+sig_filter = 1e10*Omega #mode filter, only allow |sigma| < sig_filter
 tol = 1e-12
 
 '''
@@ -496,69 +496,81 @@ for i, kx in enumerate(kx_space):
                 trial = eigen_trial*Omega
                 EP.solve(N=Neig, target = trial)
         else:
-            trial = eigenfreq[i-1]
+#            trial = eigenfreq[i-1]
             EP.solve(N=Neig, target = trial)
 
     EP.reject_spurious()
 
     abs_sig = np.abs(EP.evalues_good)
-    sig_acceptable = abs_sig < sig_filter
+    sig_acceptable = (abs_sig < sig_filter) & (EP.evalues_good.real > 0.0)
 
     sigma      = EP.evalues_good[sig_acceptable]
     sigma_index= EP.evalues_good_index[sig_acceptable]
-    
-    if sigma.size > 0:        
-        growth   =  np.real(sigma)
-        g1       =  np.argmax(growth)
-        opt_freq = sigma[g1]
-        
-        g2 = sigma_index[g1]
-        EP.solver.set_state(g2)
-        W  = EP.solver.state['W']
-        Q  = EP.solver.state['Q']
-        Ux = EP.solver.state['Ux']
-        Uy = EP.solver.state['Uy']
-        Uz = EP.solver.state['Uz']
 
-        W.set_scales(scales=out_scale)
-        Q.set_scales(scales=out_scale)
-        Ux.set_scales(scales=out_scale)
-        Uy.set_scales(scales=out_scale)
-        Uz.set_scales(scales=out_scale)
-
-        Wout = W['g']
-        Qout = Q['g']
-        Uxout = Ux['g']
-        Uyout = Uy['g']
-        Uzout = Uz['g']
-        
-    else:
-        opt_freq = np.nan
-        Wout = np.zeros(nz_out)
-        Qout = np.zeros(nz_out)
-        Uxout= np.zeros(nz_out)
-        Uyout= np.zeros(nz_out)
-        Uzout= np.zeros(nz_out)
-
-    eigenfreq.append(opt_freq) #store eigenfreq
-    
     eigenfunc['W'].append([])
     eigenfunc['Q'].append([])
     eigenfunc['Ux'].append([])
     eigenfunc['Uy'].append([])
     eigenfunc['Uz'].append([])
 
-    eigenfunc['W'][i] = np.copy(Wout)
-    eigenfunc['Q'][i] = np.copy(Qout)
-    eigenfunc['Ux'][i] = np.copy(Uxout)
-    eigenfunc['Uy'][i] = np.copy(Uyout)
-    eigenfunc['Uz'][i] = np.copy(Uzout)
+    if sigma.size > 0:
+        eigenfreq.append(sigma)
+        for n, mode in enumerate(sigma_index):
+            EP.solver.set_state(mode)
+            
+            W  = EP.solver.state['W']
+            Q  = EP.solver.state['Q']
+            Ux = EP.solver.state['Ux']
+            Uy = EP.solver.state['Uy']
+            Uz = EP.solver.state['Uz']
+            
+            W.set_scales(scales=out_scale)
+            Q.set_scales(scales=out_scale)
+            Ux.set_scales(scales=out_scale)
+            Uy.set_scales(scales=out_scale)
+            Uz.set_scales(scales=out_scale)
+            
+            Wout = W['g']
+            Qout = Q['g']
+            Uxout = Ux['g']
+            Uyout = Uy['g']
+            Uzout = Uz['g']
+
+            eigenfunc['W'][i].append(np.copy(Wout))
+            eigenfunc['Q'][i].append(np.copy(Qout))
+            eigenfunc['Ux'][i].append(np.copy(Uxout))
+            eigenfunc['Uy'][i].append(np.copy(Uyout))
+            eigenfunc['Uz'][i].append(np.copy(Uzout))
+            
+    else:
+        #opt_freq = np.nan
+        eigenfreq.append(np.array([np.nan]))
+        
+        Wout = np.zeros(nz_out)
+        Qout = np.zeros(nz_out)
+        Uxout= np.zeros(nz_out)
+        Uyout= np.zeros(nz_out)
+        Uzout= np.zeros(nz_out)
+        
+        eigenfunc['W'][i] = np.copy(Wout)
+        eigenfunc['Q'][i] = np.copy(Qout)
+        eigenfunc['Ux'][i] = np.copy(Uxout)
+        eigenfunc['Uy'][i] = np.copy(Uyout)
+        eigenfunc['Uz'][i] = np.copy(Uzout)
+
+        
+    growth = eigenfreq[i].real
+    freq   = eigenfreq[i].imag
+    g1     =  np.argmax(growth)
+    trial  = eigenfreq[i][g1]
     
 '''
-print results to screen
+print results to screen (most unstable mode for each kx)
 '''
 for i, kx in enumerate(kx_space):
-    print("i, kx, growth, freq = {0:3d} {1:1.2e} {2:9.6f} {3:9.6f}".format(i, kx, eigenfreq[i].real, -eigenfreq[i].imag))
+    growth = eigenfreq[i].real
+    g1     =  np.argmax(growth)
+    print("i, kx, growth, freq = {0:3d} {1:1.2e} {2:9.6f} {3:9.6f}".format(i, kx, eigenfreq[i][g1].real, -eigenfreq[i][g1].imag))
     
 '''
 data output
@@ -569,15 +581,15 @@ with h5py.File('stratsi_1fluid_modes.h5','w') as outfile:
 
     scale_group = outfile.create_group('scales')
     scale_group.create_dataset('kx_space',data=kx_space)
-    scale_group.create_dataset('eig_freq',data=eigenfreq)
     scale_group.create_dataset('z',   data=z_out)
     scale_group.create_dataset('zmax', data=zmax)
 
     
     tasks_group = outfile.create_group('tasks')
 
-    for i, kx in enumerate(kx_space):
+    for i, freq in enumerate(eigenfreq):
         data_group = tasks_group.create_group('k_{:03d}'.format(i))
+        data_group.create_dataset('freq',data=freq)
         data_group.create_dataset('eig_W',data=eigenfunc['W'][i])
         data_group.create_dataset('eig_Q',data=eigenfunc['Q'][i])
         data_group.create_dataset('eig_Ux',data=eigenfunc['Ux'][i])

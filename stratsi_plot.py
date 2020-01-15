@@ -31,10 +31,10 @@ read in one-fluid data
 with h5py.File('stratsi_1fluid_modes.h5','r') as infile:
   
   ks_1f    = infile['scales']['kx_space'][:]
-  freqs_1f = infile['scales']['eig_freq'][:]
   z_1f     = infile['scales']['z'][:]
   zmax_1f  = infile['scales']['zmax'][()]
 
+  freqs_1f= []
   eig_W1f = []
   eig_Q1f = []
   eig_Ux= []
@@ -42,6 +42,7 @@ with h5py.File('stratsi_1fluid_modes.h5','r') as infile:
   eig_Uz= []
 
   for k_i in infile['tasks']:
+    freqs_1f.append(infile['tasks'][k_i]['freq'][:])
     eig_W1f.append(infile['tasks'][k_i]['eig_W'][:])
     eig_Q1f.append(infile['tasks'][k_i]['eig_Q'][:])
     eig_Ux.append(infile['tasks'][k_i]['eig_Ux'][:])
@@ -56,13 +57,22 @@ if(args.kx):
     
 kx_1f       = ks_1f[n]
 sigma_1f    = freqs_1f[n]
-W1f         = eig_W1f[n]
-Q1f         = eig_Q1f[n]
-Ux          = eig_Ux[n]
-Uy          = eig_Uy[n]
-Uz          = eig_Uz[n]
 
-print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sigma_1f.real, -sigma_1f.imag))
+growth_1f   = sigma_1f.real
+freq_1f     =-sigma_1f.imag
+
+g1          = np.argmax(growth_1f)
+
+W1f         = eig_W1f[n][g1]
+Q1f         = eig_Q1f[n][g1]
+Ux          = eig_Ux[n][g1]
+Uy          = eig_Uy[n][g1]
+Uz          = eig_Uz[n][g1]
+
+
+print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, growth_1f[g1], freq_1f[g1]))
+
+#exit()
 
 
 '''
@@ -72,10 +82,10 @@ read in two-fluid data
 with h5py.File('stratsi_modes.h5','r') as infile:
   
   ks    = infile['scales']['kx_space'][:]
-  freqs = infile['scales']['eig_freq'][:]
   z     = infile['scales']['z'][:]
   zmax  = infile['scales']['zmax'][()]
-  
+
+  freqs = []
   eig_W = []
   eig_Q = []
   eig_Ugx= []
@@ -86,6 +96,7 @@ with h5py.File('stratsi_modes.h5','r') as infile:
   eig_Udz= []
   
   for k_i in infile['tasks']:
+    freqs.append(infile['tasks'][k_i]['freq'][:])
     eig_W.append(infile['tasks'][k_i]['eig_W'][:])
     eig_Q.append(infile['tasks'][k_i]['eig_Q'][:])
     eig_Ugx.append(infile['tasks'][k_i]['eig_Ugx'][:])
@@ -104,16 +115,22 @@ if(args.kx):
 
 kx       = ks[m]
 sigma    = freqs[m]
-W         = eig_W[m]
-Q         = eig_Q[m]
-Ugx          = eig_Ugx[m]
-Ugy          = eig_Ugy[m]
-Ugz          = eig_Ugz[m]
-Udx          = eig_Udx[m]
-Udy          = eig_Udy[m]
-Udz          = eig_Udz[m]
 
-print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sigma.real, -sigma.imag))
+growth      = sigma.real
+freq        =-sigma.imag
+
+g1          = np.argmax(growth)
+
+W         = eig_W[m][g1]
+Q         = eig_Q[m][g1]
+Ugx          = eig_Ugx[m][g1]
+Ugy          = eig_Ugy[m][g1]
+Ugz          = eig_Ugz[m][g1]
+Udx          = eig_Udx[m][g1]
+Udy          = eig_Udy[m][g1]
+Udz          = eig_Udz[m][g1]
+
+print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, growth[g1], freq[g1]))
 
 
 '''
@@ -139,19 +156,44 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.15)
 #plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 plt.xscale('log')
 
-axs[0].plot(ks_1f, freqs_1f.real, marker='o', linestyle='none', markersize=10, label=r'one fluid')
-axs[0].plot(ks, freqs.real, marker='X', linestyle='none', markersize=10,label=r'two fluid')
-#axs[0].set_xscale('log')
+for i, k in enumerate(ks_1f):
+    for n, sig in enumerate(freqs_1f[i]):
+        if (i == 0) & (n == 0):
+            axs[0].plot(k, sig.real, marker='o', linestyle='none', markersize=8, label=r'one fluid',color='black')
+        else:
+            axs[0].plot(k, sig.real, marker='o', linestyle='none', markersize=8, color='black')
+            
+for i, k in enumerate(ks):
+    for n, sig in enumerate(freqs[i]):
+        if (i == 0) & (n == 0):
+            axs[0].plot(k, sig.real, marker='X', linestyle='none', markersize=8, label=r'two fluid',color='red')
+        else:
+            axs[0].plot(k, sig.real, marker='X', linestyle='none', markersize=8, color='red')
+
 axs[0].set_ylabel(r'$s/\Omega$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
-legend=axs[0].legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, handletextpad=-0.5)
+legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5)
 
-axs[1].plot(ks_1f, -freqs_1f.imag, marker='o', markersize=10,linestyle='none', label=r'one fluid')
-axs[1].plot(ks, -freqs.imag, marker='X',markersize=10,linestyle='none',  label=r'two fluid')
+for i, k in enumerate(ks_1f):
+    for n, sig in enumerate(freqs_1f[i]):
+        if (i == 0) & (n == 0):
+            axs[1].plot(k, -sig.imag, marker='o', linestyle='none', markersize=8, label=r'one fluid',color='black')
+        else:
+            axs[1].plot(k, -sig.imag, marker='o', linestyle='none', markersize=8,color='black')
+
+for i, k in enumerate(ks):
+    for n, sig in enumerate(freqs[i]):
+        if (i == 0) & (n == 0):
+            axs[1].plot(k, -sig.imag, marker='X', linestyle='none', markersize=8, label=r'two fluid',color='red')
+        else:
+            axs[1].plot(k, -sig.imag, marker='X', linestyle='none', markersize=8,color='red')
+            
+#axs[1].plot(ks, -freqs.imag, marker='X',markersize=10,linestyle='none',  label=r'two fluid')
+
 axs[1].set_ylabel(r'$\omega/\Omega$')
 axs[1].set_xlabel(r'$k_xH_g$')
 lines1, labels1 = axs[1].get_legend_handles_labels()
-legend=axs[1].legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, handletextpad=-0.5)
+legend=axs[1].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5)
 
 plt.xlim(np.amin(ks),np.amax(ks))
 

@@ -50,14 +50,14 @@ nz_vert = 1024
 mode parameters
 '''
 kx     = 400.0
-kx_min = 1e2
+kx_min = 1e3
 kx_max = 1e4
-nkx    = 20
+nkx    = 5
 
 '''
 vertical resolution
 '''
-nz_waves = 192
+nz_waves = 128
 
 '''
 physics options 
