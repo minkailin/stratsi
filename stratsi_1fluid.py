@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1e3
+kx_min = 400
 kx_max = 1e4
-nkx    = 5
+nkx    = 1
 
 '''
 physics options 
@@ -59,15 +59,15 @@ if((tstop == False) and (diffusion == True)):
 '''
 problem parameters
 '''
-alpha0    = 1e-5
-st0       = 1e-3
+alpha0    = 1e-6
+st0       = 1e-2
 dg0       = 2.0
 metal     = 0.03#0.00135
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.5#0.005
-nz_waves  = 128
+zmax      = 0.1#0.005
+nz_waves  = 160
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -80,11 +80,11 @@ Diff  = delta0*cs*Hgas
 '''
 numerical options
 '''
-all_solve_dense   = True #solve for all eigenvals for all kx
+all_solve_dense   = False #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
-Neig = 5 #number of eigenvalues to get for sparse solver
-eigen_trial = 3.443389841773668e-1 + 1.163124355733028e0*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
-sig_filter = 1e10*Omega #mode filter, only allow |sigma| < sig_filter
+Neig = 10 #number of eigenvalues to get for sparse solver
+eigen_trial = 3.886269e-1-3.766863e-3*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
+sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
 tol = 1e-12
 
 '''
@@ -562,7 +562,7 @@ for i, kx in enumerate(kx_space):
     growth = eigenfreq[i].real
     freq   = eigenfreq[i].imag
     g1     =  np.argmax(growth)
-    trial  = eigenfreq[i][g1]
+    trial  = np.mean(growth) + 1j*np.mean(freq)#eigenfreq[i][g1]
     
 '''
 print results to screen (most unstable mode for each kx)
