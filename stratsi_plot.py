@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import h5py
 import argparse
 
-from stratsi_params import delta, stokes
+from stratsi_params import delta, stokes, metal
 
 '''
 process command line arguements
@@ -253,145 +253,92 @@ plt.savefig(fname,dpi=150)
 plot eigenfunctions
 '''
 
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+plt.rc('font',size=fontsize/1.5,weight='bold')
 
+fig, axs = plt.subplots(5, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,7.5))
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.125)
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
+
+g1 = np.argmax(np.abs(del_rhod1f))
+norm_1f = del_rhod1f[g1]
+
+g1 = np.argmax(np.abs(del_rhod))
+norm    = del_rhod[g1]
+
+deleps_1f = del_rhod1f/norm_1f
+deleps    = del_rhod/norm
+
+axs[0].plot(z_1f, deleps_1f.real, linewidth=2, label=r'one-fluid, real', color='black')
+axs[0].plot(z_1f, deleps_1f.imag, linewidth=2, label=r'one-fluid, imag', color='m')
+
+axs[0].plot(z, deleps.real, linewidth=2, label=r'two-fluid, real', color='red', linestyle='dashed')
+axs[0].plot(z, deleps.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
+
+axs[0].set_ylabel(r'$\delta\rho_d/\rho_d$')
+lines1, labels1 = axs[0].get_legend_handles_labels()
+axs[0].legend(lines1, labels1, loc=(0.55,-0.08), frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
+
+W1f_norm = W1f/norm_1f
+W_norm   = W/norm
+axs[1].plot(z_1f, W1f_norm.real, linewidth=2, label=r'one-fluid, real', color='black')
+axs[1].plot(z_1f, W1f_norm.imag, linewidth=2, label=r'one-fluid, imag', color='m')
+
+axs[1].plot(z, W_norm.real, linewidth=2, label=r'two-fluid, real', color='red', linestyle='dashed')
+axs[1].plot(z, W_norm.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
+
+axs[1].set_ylabel(r'$\delta\rho_g/\rho_{g}$')
+#lines1, labels1 = axs[1].get_legend_handles_labels()
+#axs[1].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+Ux_norm = Ux/norm_1f
+Ugx_norm = Ugx/norm
+Udx_norm = Udx/norm
+axs[2].plot(z_1f, np.abs(Ux_norm), linewidth=2, label=r'one-fluid', color='black')
+axs[2].plot(z, np.abs(Ugx_norm), linewidth=2, label=r'dust', color='red', linestyle='dashed')
+axs[2].plot(z, np.abs(Udx_norm), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
+#axs[2].plot(z_1f, Ux_norm.imag, linewidth=2, color='black')
+#axs[2].plot(z, Ugx_norm.imag, linewidth=2, color='red', linestyle='dashed')
+#axs[2].plot(z, Udx_norm.imag, linewidth=2, color='blue', linestyle='dotted')
+axs[2].set_ylabel(r'$|\delta v_{x}|$')
+lines1, labels1 = axs[2].get_legend_handles_labels()
+axs[2].legend(lines1, labels1, loc='right', frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
+
+Uy_norm = Uy/norm_1f
+Ugy_norm = Ugy/norm
+Udy_norm = Udy/norm
+axs[3].plot(z_1f, np.abs(Uy_norm), linewidth=2, label=r'one-fluid', color='black')
+axs[3].plot(z, np.abs(Ugy_norm), linewidth=2, label=r'dust', color='red', linestyle='dashed')
+axs[3].plot(z, np.abs(Udy_norm), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
+axs[3].set_ylabel(r'$|\delta v_{y}|$')
+#lines1, labels1 = axs[3].get_legend_handles_labels()
+#axs[3].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+Uz_norm = Uz/norm_1f
+Ugz_norm = Ugz/norm
+Udz_norm = Udz/norm
+axs[4].plot(z_1f, np.abs(Uz_norm), linewidth=2, label=r'one-fluid', color='black')
+axs[4].plot(z, np.abs(Ugz_norm), linewidth=2, label=r'dust', color='red', linestyle='dashed')
+axs[4].plot(z, np.abs(Udz_norm), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
+axs[4].set_ylabel(r'$|\delta v_{z}|$')
+#lines1, labels1 = axs[4].get_legend_handles_labels()
+#axs[4].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')
+
+#plt.xticks(f,weight='bold')
 plt.xlim(xmin,xmax)
-plt.ylim(-ymax,ymax)
 
-Uz_norm = np.conj(Uz[0])*Uz
-Uz_norm/= np.amax(np.abs(Uz_norm))
-
-plt.plot(z_1f, np.real(Uz_norm), linewidth=2, label=r're, one-fluid')#, color='b')
-plt.plot(z_1f, np.imag(Uz_norm), linewidth=2, label=r'im, one-fluid')#, linestyle='dashed',color='b')
-
-# plt.gca().set_prop_cycle(None) #resets color cycle
-
-# Udz_norm = np.conj(Udz[0])*Udz
-# Udz_norm/= np.amax(np.abs(Udz_norm))
-
-# plt.plot(z, np.real(Udz_norm), linewidth=2, label=r're, two-fluid',linestyle='dashed')
-# plt.plot(z, np.imag(Udz_norm), linewidth=2, label=r'im, two-fluid',linestyle='dashed')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-#title = r"$k_xH_g=${0:4.0f}, s={1:5.3f}$\Omega$".format(kx_1f, sigma_1f.real)
-#plt.title(title,weight='bold')
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta v_{z}$', fontsize=fontsize)
-
-fname = 'stratsi_plot_vz'
+fname = 'stratsi_plot_eigenfunc'
 plt.savefig(fname,dpi=150)
 
-#########################################################################################################
 
 
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 
-plt.xlim(xmin,xmax)
-plt.ylim(-ymax,ymax)
 
-Udz_norm = np.conj(Udz[0])*Udz
-Udz_norm/= np.amax(np.abs(Udz_norm))
 
-plt.plot(z, np.real(Udz_norm), linewidth=2, label=r're, two-fluid')
-plt.plot(z, np.imag(Udz_norm), linewidth=2, label=r'im, two-fluid')
 
-plt.rc('font',size=fontsize,weight='bold')
 
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
 
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\delta v_{dz}$', fontsize=fontsize)
 
-fname = 'stratsi_plot_vdz'
-plt.savefig(fname,dpi=150)
-
-#########################################################################################################
-
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.9, bottom=0.2)
-
-title=r"$K_x$={0:4.0f}, St={1:4.0e}, $\delta$={2:4.0e}".format(ks[m], stokes, delta)
-plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold',x=0.55)
-
-plt.xlim(xmin,xmax)
-plt.ylim(0,ymax)
-
-dpert_1f = np.abs(del_rhod1f)
-dpert_1f/= np.amax(dpert_1f)
-plt.plot(z_1f, dpert_1f, linewidth=2, label=r'one-fluid',color='black')
-
-dpert = np.abs(del_rhod)
-dpert/= np.amax(dpert)
-plt.plot(z, dpert, linewidth=2, label=r'two-fluid',linestyle='dashed',color='r')
-
-#plt.plot(z, eig_W[m][g1].real, linewidth=2, label=r'one-fluid',color='black')
-#plt.plot(z, eig_W[m][g1+1].real, linewidth=2, label=r'two-fluid',linestyle='dashed',color='r')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$|\delta\rho_d/\rho_d|$', fontsize=fontsize)
-
-fname = 'stratsi_plot_Q'
-plt.savefig(fname,dpi=150)
-
-#########################################################################################################
-'''
-compare vz to horizontal velocities
-'''
-
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-
-plt.xlim(xmin,xmax)
-#plt.ylim(0,ymax)
-
-theta_1f_vert = np.abs(Uz)/np.amax(abs(Uz))
-theta_1f_horz = np.sqrt(np.abs(Ux)**2 + np.abs(Uy)**2)/np.amax(abs(Uz))
-plt.plot(z_1f, theta_1f_vert, linewidth=2, label=r'one-fluid, $v_z$')
-plt.plot(z_1f, theta_1f_horz, linewidth=2, label=r'one-fluid, $v_{x,y}$')
-
-plt.gca().set_prop_cycle(None)
-
-theta_vert = np.abs(Udz)/np.amax(abs(Udz))
-theta_horz = np.sqrt(np.abs(Udx)**2 + np.abs(Udy)**2)/np.amax(abs(Udz))
-plt.plot(z, theta_vert, linewidth=2, label=r'two-fluid, $v_{dz}$', linestyle='dashed')
-plt.plot(z, theta_horz, linewidth=2, label=r'two-fluid, $v_{dx,dy}$', linestyle='dashed')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-#plt.ylabel(r'$\theta$', fontsize=fontsize)
-
-fname = 'stratsi_plot_theta'
-plt.savefig(fname,dpi=150)

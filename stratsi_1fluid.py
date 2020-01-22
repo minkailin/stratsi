@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400
+kx_min = 1e3
 kx_max = 1e4
 nkx    = 1
 
@@ -59,15 +59,15 @@ if((tstop == False) and (diffusion == True)):
 '''
 problem parameters
 '''
-alpha0    = 1e-6
-st0       = 1e-2
+alpha0    = 1e-5
+st0       = 1e-3
 dg0       = 2.0
 metal     = 0.03#0.00135
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.1#0.005
-nz_waves  = 160
+zmax      = 0.5
+nz_waves  = 256
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
