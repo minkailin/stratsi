@@ -2,8 +2,18 @@ import sys
 import numpy as np
 from mpi4py import MPI
 import matplotlib.pyplot as plt
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
+                               AutoMinorLocator)
 import h5py
 import argparse
+
+#custom_preamble = {
+#    "text.usetex": True,
+#    "text.latex.preamble": [
+#        r"\usepackage{amsmath}", # for the align enivironment
+#        ],
+#    }
+
 
 from stratsi_params import delta, stokes, metal
 
@@ -84,7 +94,9 @@ Uz          = eig_Uz[n][g1]
 
 del_rhod1f    = Q1f + W1f
 
-print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, growth_1f[g1], freq_1f[g1]))
+sgrow_1f = growth_1f[g1]
+ofreq_1f = freq_1f[g1]
+print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
 
 #exit()
 
@@ -149,7 +161,9 @@ Udz          = eig_Udz[m][g1]
 
 del_rhod    = Q + W
 
-print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, growth[g1], freq[g1]))
+sgrow = growth[g1]
+ofreq = freq[g1]
+print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
 
 
 '''
@@ -179,16 +193,18 @@ plt.xscale('log')
 for i, k in enumerate(ks_1f):
     for n, sig in enumerate(freqs_1f[i]):
         if (i == 0) & (n == 0):
-            axs[0].plot(k, sig.real, marker='o', linestyle='none', markersize=8, label=r'one fluid',color='black')
+            lab = r'one fluid'
         else:
-            axs[0].plot(k, sig.real, marker='o', linestyle='none', markersize=8, color='black')
-            
+            lab = ''
+        axs[0].plot(k, sig.real, marker='o', linestyle='none', markersize=8, label=lab,color='black')
+       
 for i, k in enumerate(ks):
     for n, sig in enumerate(freqs[i]):
         if (i == 0) & (n == 0):
-            axs[0].plot(k, sig.real, marker='X', linestyle='none', markersize=8, label=r'two fluid',color='red')
+            lab = r'two fluid'
         else:
-            axs[0].plot(k, sig.real, marker='X', linestyle='none', markersize=8, color='red')
+            lab = ''
+        axs[0].plot(k, sig.real, marker='X', linestyle='none', markersize=8, label=lab,color='red')
 
 axs[0].set_ylabel(r'$s/\Omega$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
@@ -197,17 +213,19 @@ legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, h
 for i, k in enumerate(ks_1f):
     for n, sig in enumerate(freqs_1f[i]):
         if (i == 0) & (n == 0):
-            axs[1].plot(k, -sig.imag, marker='o', linestyle='none', markersize=8, label=r'one fluid',color='black')
+            lab = r'one fluid'
         else:
-            axs[1].plot(k, -sig.imag, marker='o', linestyle='none', markersize=8,color='black')
+            lab = ''
+        axs[1].plot(k, -sig.imag, marker='o', linestyle='none', markersize=8, label=lab,color='black')
 
 for i, k in enumerate(ks):
     for n, sig in enumerate(freqs[i]):
         if (i == 0) & (n == 0):
-            axs[1].plot(k, -sig.imag, marker='X', linestyle='none', markersize=8, label=r'two fluid',color='red')
+            lab = r'two fluid'
         else:
-            axs[1].plot(k, -sig.imag, marker='X', linestyle='none', markersize=8,color='red')
-            
+            lab = ''
+        axs[1].plot(k, -sig.imag, marker='X', linestyle='none', markersize=8, label=lab,color='red')
+       
 #axs[1].plot(ks, -freqs.imag, marker='X',markersize=10,linestyle='none',  label=r'two fluid')
 
 axs[1].set_ylabel(r'$\omega/\Omega$')
@@ -219,6 +237,61 @@ plt.xlim(np.amin(ks),np.amax(ks))
 
 fname = 'stratsi_plot_growth'
 plt.savefig(fname,dpi=150)
+
+'''
+plot max growth rates as func of kx
+'''
+
+fig, axs = plt.subplots(2, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,6))
+plt.subplots_adjust(left=0.16, right=0.95, top=0.95, bottom=0.15)
+plt.xscale('log')
+
+for i, k in enumerate(ks_1f):
+    g1 = np.argmax(freqs_1f[i].real)
+    if i == 0:
+        lab = r'one fluid'
+    else:
+        lab = ''
+    axs[0].plot(k, freqs_1f[i][g1].real , marker='o', linestyle='none', markersize=8, label=lab,color='black')
+    
+for i, k in enumerate(ks):
+    g1 = np.argmax(freqs[i].real)
+    if i == 0:
+        lab = r'two fluid'
+    else:
+        lab = ''
+    axs[0].plot(k, freqs[i][g1].real , marker='X', linestyle='none', markersize=8, label=lab,color='red')
+    
+axs[0].set_ylabel(r'$s_*/\Omega$')
+lines1, labels1 = axs[0].get_legend_handles_labels()
+legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5,fontsize=fontsize/2)
+
+for i, k in enumerate(ks_1f):
+    g1 = np.argmax(freqs_1f[i].real)
+    if i == 0:
+        lab = r'one fluid'
+    else:
+        lab = ''
+    axs[1].plot(k, -freqs_1f[i][g1].imag, marker='o', linestyle='none', markersize=8, label=lab,color='black')
+    
+for i, k in enumerate(ks):
+    g1 = np.argmax(freqs[i].real)
+    if i == 0:
+        lab = r'two fluid'
+    else:
+        lab = ''
+    axs[1].plot(k, -freqs[i][g1].imag, marker='X', linestyle='none', markersize=8, label=lab,color='red')
+  
+axs[1].set_ylabel(r'$\omega_*/\Omega$')
+axs[1].set_xlabel(r'$k_xH_g$')
+#lines1, labels1 = axs[1].get_legend_handles_labels()
+#legend=axs[1].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5, fontsize=fontsize/2)
+
+plt.xlim(np.amin(ks),np.amax(ks))
+
+fname = 'stratsi_plot_growth_max'
+plt.savefig(fname,dpi=150)
+
 
 '''
 plot eigenvalues as scatter diagram for a single kx 
@@ -276,8 +349,8 @@ axs[0].plot(z, deleps.real, linewidth=2, label=r'two-fluid, real', color='red', 
 axs[0].plot(z, deleps.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
 
 axs[0].set_ylabel(r'$\delta\rho_d/\rho_d$')
-lines1, labels1 = axs[0].get_legend_handles_labels()
-axs[0].legend(lines1, labels1, loc=(0.55,-0.08), frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
+#lines1, labels1 = axs[0].get_legend_handles_labels()
+#axs[0].legend(lines1, labels1, loc=(0.6,-0.07), frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
 
 W1f_norm = W1f/norm_1f
 W_norm   = W/norm
@@ -288,6 +361,9 @@ axs[1].plot(z, W_norm.real, linewidth=2, label=r'two-fluid, real', color='red', 
 axs[1].plot(z, W_norm.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
 
 axs[1].set_ylabel(r'$\delta\rho_g/\rho_{g}$')
+axs[1].ticklabel_format(axis='y', style='sci',scilimits=(-2,2))
+axs[1].yaxis.set_major_formatter(FormatStrFormatter('%3.0e'))
+
 #lines1, labels1 = axs[1].get_legend_handles_labels()
 #axs[1].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
@@ -301,8 +377,8 @@ axs[2].plot(z, np.abs(Udx_norm), linewidth=2, label=r'gas', color='lime', linest
 #axs[2].plot(z, Ugx_norm.imag, linewidth=2, color='red', linestyle='dashed')
 #axs[2].plot(z, Udx_norm.imag, linewidth=2, color='blue', linestyle='dotted')
 axs[2].set_ylabel(r'$|\delta v_{x}|$')
-lines1, labels1 = axs[2].get_legend_handles_labels()
-axs[2].legend(lines1, labels1, loc='right', frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
+#lines1, labels1 = axs[2].get_legend_handles_labels()
+#axs[2].legend(lines1, labels1, loc='right', frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
 
 Uy_norm = Uy/norm_1f
 Ugy_norm = Ugy/norm
@@ -313,6 +389,13 @@ axs[3].plot(z, np.abs(Udy_norm), linewidth=2, label=r'gas', color='lime', linest
 axs[3].set_ylabel(r'$|\delta v_{y}|$')
 #lines1, labels1 = axs[3].get_legend_handles_labels()
 #axs[3].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
+
+ymax = np.amax(np.abs(Uy_norm))
+#arrbeg = r'\begin{align*}'
+#arrend = r'\end{align*}'
+#plt.rcParams.update(custom_preamble)
+axs[3].annotate(r"$k_xH_g$={0:3.0f}".format(kx)+"\n"+r"s={0:4.2f}$\Omega$".format(sgrow), xy=(0.75*xmax, 0.5*ymax))
+
 
 Uz_norm = Uz/norm_1f
 Ugz_norm = Ugz/norm
@@ -325,6 +408,7 @@ axs[4].set_ylabel(r'$|\delta v_{z}|$')
 #axs[4].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
 axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')
+
 
 #plt.xticks(f,weight='bold')
 plt.xlim(xmin,xmax)

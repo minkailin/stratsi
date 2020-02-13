@@ -314,3 +314,59 @@ plt.xlim(zmin,zmax)
 
 fname = 'stratsi_eqm_cen'
 plt.savefig(fname,dpi=150)
+
+'''
+single plot of eqm d/g ratio
+'''
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+plt.xlim(zmin,zmax)
+
+plt.plot(zaxis, dg, linewidth=2,label='vertical shear')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+#lines1, labels1 = ax.get_legend_handles_labels()
+#legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$\rho_{d}/\rho_{g}$', fontsize=fontsize)
+
+fname = 'stratsi_eqm_epsilon'
+plt.savefig(fname,dpi=150)
+
+
+'''
+plot vertical shear rate (under construction)
+'''
+'''
+vdy0.differentiate('z', out=dvdy0)
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+plt.xlim(zmin,zmax)
+
+plt.plot(zaxis, np.abs(2.0*Omega*dvy), linewidth=2,label='vertical shear')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$r\frac{d\Omega^2}{dz}, N_z^2$', fontsize=fontsize)
+
+fname = 'stratsi_eqm_vshear'
+plt.savefig(fname,dpi=150)
+'''
