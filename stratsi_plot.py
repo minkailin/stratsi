@@ -409,7 +409,6 @@ axs[4].set_ylabel(r'$|\delta v_{z}|$')
 
 axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')
 
-
 #plt.xticks(f,weight='bold')
 plt.xlim(xmin,xmax)
 
@@ -417,12 +416,62 @@ fname = 'stratsi_plot_eigenfunc'
 plt.savefig(fname,dpi=150)
 
 
+'''
+2D visualization of eigenfunction (using two-fluid solution)
+'''
+nx = 128
+nz = np.size(z)
+
+x  = (2.0*np.pi/kx)*np.linspace(-1.0, 1.0, nx)
+
+X, Z = np.meshgrid(x,z)
+
+deleps2D = np.repeat(deleps[...,np.newaxis], nx, axis=1)
+Udx_2D   = np.repeat(Udx_norm[...,np.newaxis], nx, axis=1)
+Udz_2D   = np.repeat(Udy_norm[...,np.newaxis], nx, axis=1)
+
+data2D = np.cos(kx*X)*deleps2D.real - np.sin(kx*X)*deleps2D.imag
+vx2D   = np.cos(kx*X)*Udx_2D.real - np.sin(kx*X)*Udx_2D.imag
+vz2D   = np.cos(kx*X)*Udz_2D.real - np.sin(kx*X)*Udz_2D.imag
+
+plt.figure(figsize=(7,7))
+
+plt.ylim(np.amin(z), np.amax(z))
+plt.xlim(np.amin(x), np.amax(x))
+
+minv = np.amin(data2D)
+maxv = np.amax(data2D)
+
+levels  = np.linspace(minv,maxv,nlev)
+clevels = np.linspace(minv,maxv,nclev)
+
+plt.rc('font',size=fontsize,weight='bold')
 
 
+cp = plt.contourf(x, z, data2D, levels, cmap=cmap)
 
+xfac = np.int(nx/32)
+zfac = np.int(nz/64)
 
+plt.quiver(x[0:nx:xfac], z[0:nz:zfac], vx2D[0:nz:zfac,0:nx:xfac],
+               vz2D[0:nz:zfac,0:nx:xfac], color='lime',
+               width=0.005, scale=0.2
+               )
 
+plt.gca().set_aspect("equal")
+#plt.tight_layout()
+plt.subplots_adjust(left=-0.2, right=0.95, top=0.9, bottom=0.125)
 
+plt.colorbar(cp,ticks=clevels,format='%.2f')
+#plt.title(title,weight='bold')
 
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$x/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$z/H_g$',fontsize=fontsize)
+
+fname = 'stratsi_plot_eigenf2D'
+plt.savefig(fname,dpi=150)
 
 
