@@ -15,7 +15,8 @@ import argparse
 #    }
 
 
-from stratsi_params import delta, stokes, metal
+from stratsi_params import delta, stokes, metal, epsilon, vdz, dvdz
+from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat
 
 '''
 process command line arguements
@@ -98,6 +99,48 @@ sgrow_1f = growth_1f[g1]
 ofreq_1f = freq_1f[g1]
 print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
 
+
+'''
+analysis of energetics based on 1 fluid results 
+'''
+
+eps1f = epsilon_eqm(z_1f)
+dvx1f = dvx_eqm(z_1f)
+dvy1f = dvy_eqm(z_1f)
+vz1f  = vz_eqm(z_1f)
+dvz1f = dvz_eqm(z_1f)
+
+del_rho1f = W1f + eps1f*Q1f/(1.0 + eps1f)
+
+dW1f= np.gradient(W1f, z_1f) 
+dUx = np.gradient(Ux, z_1f)
+dUy = np.gradient(Uy, z_1f)
+dUz = np.gradient(Uz, z_1f)
+
+fac = 4.0
+
+energy1f_tot = sgrow_1f*(np.abs(Ux)**2 + fac*np.abs(Uy)**2 + np.abs(Uz)**2)
+
+energy1f_A1 = -(dvx1f*np.real(Uz*np.conj(Ux)))
+energy1f_A2 = -(fac*dvy1f*np.real(Uz*np.conj(Uy)))
+energy1f_A3 = -(dvz1f*np.abs(Uz)**2)
+energy1f_A = energy1f_A1 + energy1f_A2 + energy1f_A3
+energy1f_B = -vz1f*np.real(dUx*np.conj(Ux) + fac*dUy*np.conj(Uy) + dUz*np.conj(Uz))
+energy1f_C = (kx_1f*np.imag(W1f*np.conj(Ux)) - np.real(dW1f*np.conj(Uz)))/(1.0 + eps1f)
+energy1f_D = -2.0*eta_hat*np.real(del_rho1f*np.conj(Ux))/(1.0 + eps1f)
+energy1f_E = -z_1f*eps1f*np.real(Q1f*np.conj(Uz))/(1.0 + eps1f)
+energy1f_F = 2.0*np.real(Uy*np.conj(Ux)) - 0.5*np.real(Ux*np.conj(Uy))
+
+energy1f_A/= energy1f_tot
+energy1f_A1/= energy1f_tot
+energy1f_A2/= energy1f_tot
+energy1f_A3/= energy1f_tot
+energy1f_B/= energy1f_tot
+energy1f_C/= energy1f_tot
+energy1f_D/= energy1f_tot
+energy1f_E/= energy1f_tot
+energy1f_F/= energy1f_tot
+
 #exit()
 
 
@@ -165,6 +208,61 @@ sgrow = growth[g1]
 ofreq = freq[g1]
 print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
 
+'''
+energy analysis
+'''
+#read in background vertical profiles of vgx, vgy, vdx, vdy
+
+horiz_eqm  = h5py.File('./eqm_horiz.h5', 'r')
+vgx        = horiz_eqm['vgx'][:]
+vgy        = horiz_eqm['vgy'][:]
+vdx        = horiz_eqm['vdx'][:]
+vdy        = horiz_eqm['vdy'][:]
+horiz_eqm.close()
+
+dvgx = np.gradient(vgx, z)
+dvgy = np.gradient(vgy, z)
+dvdx = np.gradient(vdx, z)
+dvdy = np.gradient(vdy, z)
+
+eps2f  = epsilon(z)
+
+dW   = np.gradient(W, z) 
+dUgx = np.gradient(Ugx, z)
+dUgy = np.gradient(Ugy, z)
+dUgz = np.gradient(Ugz, z)
+
+dUdx = np.gradient(Udx, z)
+dUdy = np.gradient(Udy, z)
+dUdz = np.gradient(Udz, z)
+
+energy2f_tot = eps2f*sgrow*(np.abs(Udx)**2 + 4.0*np.abs(Udy)**2 + np.abs(Udz)**2)
+energy2f_tot+= sgrow*(np.abs(Ugx)**2 + 4.0*np.abs(Ugy)**2 + np.abs(Ugz)**2)
+energy2f_A   =-eps2f*np.real(Udz*np.conj(dvdx*Udx + 4.0*dvdy*Udy + dvdz(z)*Udz))
+energy2f_A  +=-np.real(Ugz*np.conj(dvgx*Ugx + 4.0*dvgy*Ugy))
+energy2f_A2  = -eps2f*np.real(Udz*np.conj(4.0*dvdy*Udy)) - np.real(Ugz*np.conj(4.0*dvgy*Ugy))
+energy2f_B   =-eps2f*vdz(z)*np.real(dUdx*np.conj(Udx) + 4.0*dUdy*np.conj(Udy) + dUdz*np.conj(Udz))
+energy2f_C   = kx*np.imag(W*np.conj(Ugx)) - np.real(dW*np.conj(Ugz))
+energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy)) - vdz(z)*np.real(Q*np.conj(Ugz))
+energy2f_D  += np.abs(Ugx - Udx)**2 + 4.0*np.abs(Ugy - Udy)**2 + np.abs(Ugz - Udz)**2
+energy2f_D  *= -eps2f/stokes
+
+energy2f_A /= energy2f_tot
+energy2f_A2 /= energy2f_tot
+energy2f_B /= energy2f_tot
+energy2f_C /= energy2f_tot
+energy2f_D /= energy2f_tot
+
+
+'''
+calculate ratio between vertical to horizontal motions, for the most unstable mode at each kx in two fluid model
+'''
+theta = np.zeros(ks.size)
+for i, k in enumerate(ks):
+    g2          = np.argmax(freqs[i].real)
+    theta2_z    = np.abs(eig_Ugz[i][g2])**2.0 + np.abs(eig_Udz[i][g2])**2.0
+    theta2_z   /= np.abs(eig_Ugx[i][g2])**2.0 + np.abs(eig_Ugy[i][g2])**2.0 + np.abs(eig_Udx[i][g2])**2.0 + np.abs(eig_Udy[i][g2])**2.0
+    theta[i]    = np.sqrt(np.mean(theta2_z))
 
 '''
 plotting parameters
@@ -262,7 +360,7 @@ for i, k in enumerate(ks):
         lab = ''
     axs[0].plot(k, freqs[i][g1].real , marker='X', linestyle='none', markersize=8, label=lab,color='red')
     
-axs[0].set_ylabel(r'$s_*/\Omega$')
+axs[0].set_ylabel(r'$s_\mathrm{max}/\Omega$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
 legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5,fontsize=fontsize/2)
 
@@ -282,7 +380,7 @@ for i, k in enumerate(ks):
         lab = ''
     axs[1].plot(k, -freqs[i][g1].imag, marker='X', linestyle='none', markersize=8, label=lab,color='red')
   
-axs[1].set_ylabel(r'$\omega_*/\Omega$')
+axs[1].set_ylabel(r'$\omega/\Omega$')
 axs[1].set_xlabel(r'$k_xH_g$')
 #lines1, labels1 = axs[1].get_legend_handles_labels()
 #legend=axs[1].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5, fontsize=fontsize/2)
@@ -420,50 +518,64 @@ plt.savefig(fname,dpi=150)
 2D visualization of eigenfunction (using two-fluid solution)
 '''
 nx = 128
-nz = np.size(z)
+nz = nx
 
-x  = (2.0*np.pi/kx)*np.linspace(-1.0, 1.0, nx)
+xaxis  = (2.0*np.pi/kx)*np.linspace(-1.0, 1.0, nx)
+zaxis  = np.linspace(np.amin(z), np.amax(z), nz)
 
-X, Z = np.meshgrid(x,z)
+X, Z = np.meshgrid(xaxis,zaxis)
 
-deleps2D = np.repeat(deleps[...,np.newaxis], nx, axis=1)
-Udx_2D   = np.repeat(Udx_norm[...,np.newaxis], nx, axis=1)
-Udz_2D   = np.repeat(Udy_norm[...,np.newaxis], nx, axis=1)
+rhod = np.interp(zaxis, z, deleps)
+vdx  = np.interp(zaxis, z, Udx_norm)
+vdz  = np.interp(zaxis, z, Udz_norm)
 
-data2D = np.cos(kx*X)*deleps2D.real - np.sin(kx*X)*deleps2D.imag
-vx2D   = np.cos(kx*X)*Udx_2D.real - np.sin(kx*X)*Udx_2D.imag
-vz2D   = np.cos(kx*X)*Udz_2D.real - np.sin(kx*X)*Udz_2D.imag
+rhod_2D = np.repeat(rhod[...,np.newaxis], nx, axis=1)
+vdx_2D   = np.repeat(vdx[...,np.newaxis], nx, axis=1)
+vdz_2D   = np.repeat(vdz[...,np.newaxis], nx, axis=1)
+
+data   = np.cos(kx*X)*rhod_2D.real - np.sin(kx*X)*rhod_2D.imag
+U      = np.cos(kx*X)*vdx_2D.real - np.sin(kx*X)*vdx_2D.imag
+V      = np.cos(kx*X)*vdz_2D.real - np.sin(kx*X)*vdz_2D.imag
 
 plt.figure(figsize=(7,7))
 
-plt.ylim(np.amin(z), np.amax(z))
-plt.xlim(np.amin(x), np.amax(x))
+plt.ylim(np.amin(zaxis), np.amax(zaxis))
+plt.xlim(np.amin(xaxis), np.amax(xaxis))
 
-minv = np.amin(data2D)
-maxv = np.amax(data2D)
+minv = np.amin(data)
+maxv = np.amax(data)
 
 levels  = np.linspace(minv,maxv,nlev)
 clevels = np.linspace(minv,maxv,nclev)
 
 plt.rc('font',size=fontsize,weight='bold')
 
+cp = plt.contourf(xaxis, zaxis, data, levels, cmap=cmap)
 
-cp = plt.contourf(x, z, data2D, levels, cmap=cmap)
+xfac = np.int(nx/64)
+zfac = np.int(nz/128)
 
-xfac = np.int(nx/32)
-zfac = np.int(nz/64)
+#plt.quiver(xaxis[0:nx:xfac], zaxis[0:nz:zfac], U[0:nz:zfac,0:nx:xfac],
+#               V[0:nz:zfac,0:nx:xfac], color='deepskyblue',
+#               width=0.005, scale=0.2
+#               )
 
-plt.quiver(x[0:nx:xfac], z[0:nz:zfac], vx2D[0:nz:zfac,0:nx:xfac],
-               vz2D[0:nz:zfac,0:nx:xfac], color='lime',
-               width=0.005, scale=0.2
+speed = np.sqrt(U**2 + V**2)
+lw    = 0.7#2*speed/speed.max()
+
+plt.streamplot(xaxis, zaxis, U, V, 
+               color='deepskyblue', density=3, 
+               linewidth=lw
                )
 
-plt.gca().set_aspect("equal")
+#plt.gca().set_aspect("equal")
 #plt.tight_layout()
-plt.subplots_adjust(left=-0.2, right=0.95, top=0.9, bottom=0.125)
+plt.subplots_adjust(left=0.2, right=0.9, top=0.9, bottom=0.125)
 
 plt.colorbar(cp,ticks=clevels,format='%.2f')
-#plt.title(title,weight='bold')
+
+title=r"$k_xH_g$={0:3.0f}".format(kx)+r", s={0:4.2f}$\Omega$".format(sgrow)
+plt.title(title,weight='bold')
 
 plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$x/H_g$',fontsize=fontsize)
@@ -474,4 +586,94 @@ plt.ylabel(r'$z/H_g$',fontsize=fontsize)
 fname = 'stratsi_plot_eigenf2D'
 plt.savefig(fname,dpi=150)
 
+'''
+plot ratio of vertical to horizontal motions
 
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+plt.xscale('log')
+
+plt.xlim(np.amin(ks),np.amax(ks))
+
+plt.plot(ks, theta, linewidth=2)
+
+plt.rc('font',size=fontsize,weight='bold')
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$\sqrt{\frac{|v_{gz}|^2 + |v_{dz}|^2}{|v_{gx}|^2 + |v_{gy}|^2 + |v_{gx}|^2  + |v_{gy}|^2}}$', fontsize=fontsize)
+
+fname = 'stratsi_plot_theta'
+plt.savefig(fname,dpi=150)
+'''
+
+'''
+plot kinetic energy decomposition based on 1-fluid result
+'''
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+plt.xlim(xmin,xmax)
+
+plt.plot(z_1f, energy1f_A, linewidth=2,label='A')
+plt.plot(z_1f, energy1f_A2, linewidth=2,label='A2',color='black',linestyle='dashed')
+
+plt.plot(z_1f, energy1f_B, linewidth=2,label='B')
+plt.plot(z_1f, energy1f_C, linewidth=2,label='C')
+plt.plot(z_1f, energy1f_D, linewidth=2,label='D')
+plt.plot(z_1f, energy1f_E, linewidth=2,label='E')
+#plt.plot(z_1f, energy1f_F, linewidth=2,label='F')
+
+plt.plot(z_1f, energy1f_A + energy1f_B + energy1f_C + energy1f_D + energy1f_E, linewidth=2,label='total')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$energy$ $fraction$', fontsize=fontsize)
+
+fname = 'stratsi_plot_energy1f'
+plt.savefig(fname,dpi=150)
+
+'''
+plot kinetic energy decomposition based on 2-fluid result
+'''
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+
+plt.xlim(xmin,xmax)
+
+plt.plot(z, energy2f_A, linewidth=2,label='A')
+plt.plot(z_1f, energy2f_A2, linewidth=2,label='A2',color='black',linestyle='dashed')
+
+plt.plot(z, energy2f_B, linewidth=2,label='B')
+plt.plot(z, energy2f_C, linewidth=2,label='C')
+plt.plot(z, energy2f_D, linewidth=2,label='D')
+
+plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D, linewidth=2,label='total')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$z/H_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$energy$ $fraction$', fontsize=fontsize)
+
+fname = 'stratsi_plot_energy2f'
+plt.savefig(fname,dpi=150)
