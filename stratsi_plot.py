@@ -6,6 +6,7 @@ from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
 import h5py
 import argparse
+from scipy.integrate import simps
 
 #custom_preamble = {
 #    "text.usetex": True,
@@ -15,8 +16,8 @@ import argparse
 #    }
 
 
-from stratsi_params import delta, stokes, metal, epsilon, vdz, dvdz
-from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat
+from stratsi_params import delta, stokes, metal, epsilon, vdz, dvdz, rhog
+from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat, P_eqm
 
 '''
 process command line arguements
@@ -87,11 +88,11 @@ if(args.sig):
 else:
     g1          = np.argmax(growth_1f)
 
-W1f         = eig_W1f[n][g1]
-Q1f         = eig_Q1f[n][g1]
-Ux          = eig_Ux[n][g1]
-Uy          = eig_Uy[n][g1]
-Uz          = eig_Uz[n][g1]
+W1f         = np.array(eig_W1f[n][g1])
+Q1f         = np.array(eig_Q1f[n][g1])
+Ux          = np.array(eig_Ux[n][g1])
+Uy          = np.array(eig_Uy[n][g1])
+Uz          = np.array(eig_Uz[n][g1])
 
 del_rhod1f    = Q1f + W1f
 
@@ -101,7 +102,7 @@ print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(
 
 
 '''
-analysis of energetics based on 1 fluid results 
+analysis of energy profiles of the most unstable mode based on 1 fluid results 
 '''
 
 eps1f = epsilon_eqm(z_1f)
@@ -109,6 +110,7 @@ dvx1f = dvx_eqm(z_1f)
 dvy1f = dvy_eqm(z_1f)
 vz1f  = vz_eqm(z_1f)
 dvz1f = dvz_eqm(z_1f)
+rho1f = P_eqm(z_1f) #divided by cs^2, but cs=1
 
 del_rho1f = W1f + eps1f*Q1f/(1.0 + eps1f)
 
@@ -117,32 +119,77 @@ dUx = np.gradient(Ux, z_1f)
 dUy = np.gradient(Uy, z_1f)
 dUz = np.gradient(Uz, z_1f)
 
-fac = 4.0
-
-energy1f_tot = sgrow_1f*(np.abs(Ux)**2 + fac*np.abs(Uy)**2 + np.abs(Uz)**2)
+energy1f_tot = sgrow_1f*(np.abs(Ux)**2 + 4*np.abs(Uy)**2 + np.abs(Uz)**2)
 
 energy1f_A1 = -(dvx1f*np.real(Uz*np.conj(Ux)))
-energy1f_A2 = -(fac*dvy1f*np.real(Uz*np.conj(Uy)))
+energy1f_A2 = -(4.0*dvy1f*np.real(Uz*np.conj(Uy)))
 energy1f_A3 = -(dvz1f*np.abs(Uz)**2)
 energy1f_A = energy1f_A1 + energy1f_A2 + energy1f_A3
-energy1f_B = -vz1f*np.real(dUx*np.conj(Ux) + fac*dUy*np.conj(Uy) + dUz*np.conj(Uz))
+energy1f_B = -vz1f*np.real(dUx*np.conj(Ux) + 4.0*dUy*np.conj(Uy) + dUz*np.conj(Uz))
 energy1f_C = (kx_1f*np.imag(W1f*np.conj(Ux)) - np.real(dW1f*np.conj(Uz)))/(1.0 + eps1f)
 energy1f_D = -2.0*eta_hat*np.real(del_rho1f*np.conj(Ux))/(1.0 + eps1f)
 energy1f_E = -z_1f*eps1f*np.real(Q1f*np.conj(Uz))/(1.0 + eps1f)
-energy1f_F = 2.0*np.real(Uy*np.conj(Ux)) - 0.5*np.real(Ux*np.conj(Uy))
 
 energy1f_A/= energy1f_tot
-energy1f_A1/= energy1f_tot
 energy1f_A2/= energy1f_tot
-energy1f_A3/= energy1f_tot
 energy1f_B/= energy1f_tot
 energy1f_C/= energy1f_tot
 energy1f_D/= energy1f_tot
 energy1f_E/= energy1f_tot
-energy1f_F/= energy1f_tot
 
-#exit()
+'''
+compare integrated energetics for the most unstable mode (at each kx) based on 1 fluid result
+'''
 
+energy1f_A_int    =[]
+energy1f_A2_int   =[]
+energy1f_B_int    =[]
+energy1f_C_int    =[]
+energy1f_D_int    =[]
+energy1f_E_int    =[]
+
+for i, kx1f in enumerate(ks_1f):
+    g2          = np.argmax(freqs_1f[i].real)
+    sgrow_1f    = np.amax(freqs_1f[i].real)
+        
+    w1f         = np.array(eig_W1f[i][g2])
+    q1f         = np.array(eig_Q1f[i][g2])
+    ux          = np.array(eig_Ux[i][g2])
+    uy          = np.array(eig_Uy[i][g2])
+    uz          = np.array(eig_Uz[i][g2])
+
+    del_rho1f = w1f + eps1f*q1f/(1.0 + eps1f)
+
+    dw1f= np.gradient(w1f, z_1f) 
+    dux = np.gradient(ux, z_1f)
+    duy = np.gradient(uy, z_1f)
+    duz = np.gradient(uz, z_1f)
+
+    e1f_tot = simps(rho1f*sgrow_1f*(np.abs(ux)**2 + 4*np.abs(uy)**2 + np.abs(uz)**2), z_1f)
+
+    e1f_A1 = simps(-(dvx1f*np.real(uz*np.conj(ux)))*rho1f, z_1f)
+    e1f_A2 = simps(-(4.0*dvy1f*np.real(uz*np.conj(uy)))*rho1f, z_1f)
+    e1f_A3 = simps(-(dvz1f*np.abs(uz)**2)*rho1f, z_1f)
+    e1f_A = e1f_A1 + e1f_A2 + e1f_A3
+    e1f_B = simps(-vz1f*np.real(dux*np.conj(ux) + 4.0*duy*np.conj(uy) + duz*np.conj(uz))*rho1f, z_1f)
+    e1f_C = simps((kx1f*np.imag(w1f*np.conj(ux)) - np.real(dw1f*np.conj(uz)))/(1.0 + eps1f)*rho1f, z_1f)
+    e1f_D = simps(-2.0*eta_hat*np.real(del_rho1f*np.conj(ux))/(1.0 + eps1f)*rho1f, z_1f)
+    e1f_E = simps(-z_1f*eps1f*np.real(q1f*np.conj(uz))/(1.0 + eps1f)*rho1f, z_1f)
+
+    e1f_A /= e1f_tot
+    e1f_A2/= e1f_tot
+    e1f_B /= e1f_tot
+    e1f_C /= e1f_tot
+    e1f_D /= e1f_tot
+    e1f_E /= e1f_tot
+
+    energy1f_A_int.append(e1f_A)
+    energy1f_A2_int.append(e1f_A2)
+    energy1f_B_int.append(e1f_B)
+    energy1f_C_int.append(e1f_C)
+    energy1f_D_int.append(e1f_D)
+    energy1f_E_int.append(e1f_E)
+    
 
 '''
 read in two-fluid data
@@ -193,14 +240,14 @@ if(args.sig):
 else:
     g1          = np.argmax(growth)
 
-W         = eig_W[m][g1]
-Q         = eig_Q[m][g1]
-Ugx          = eig_Ugx[m][g1]
-Ugy          = eig_Ugy[m][g1]
-Ugz          = eig_Ugz[m][g1]
-Udx          = eig_Udx[m][g1]
-Udy          = eig_Udy[m][g1]
-Udz          = eig_Udz[m][g1]
+W         =  np.array(eig_W[m][g1])
+Q         =  np.array(eig_Q[m][g1])
+Ugx          =  np.array(eig_Ugx[m][g1])
+Ugy          =  np.array(eig_Ugy[m][g1])
+Ugz          =  np.array(eig_Ugz[m][g1])
+Udx          =  np.array(eig_Udx[m][g1])
+Udy          =  np.array(eig_Udy[m][g1])
+Udz          =  np.array(eig_Udz[m][g1])
 
 del_rhod    = Q + W
 
@@ -253,17 +300,64 @@ energy2f_B /= energy2f_tot
 energy2f_C /= energy2f_tot
 energy2f_D /= energy2f_tot
 
+'''
+compare integrated energetics for the most unstable mode (at each kx) based on 2 fluid result
+'''
 
-'''
-calculate ratio between vertical to horizontal motions, for the most unstable mode at each kx in two fluid model
-'''
-theta = np.zeros(ks.size)
-for i, k in enumerate(ks):
+energy2f_A_int    =[]
+energy2f_A2_int   =[]
+energy2f_B_int    =[]
+energy2f_C_int    =[]
+energy2f_D_int    =[]
+
+for i, kx2f in enumerate(ks):
     g2          = np.argmax(freqs[i].real)
-    theta2_z    = np.abs(eig_Ugz[i][g2])**2.0 + np.abs(eig_Udz[i][g2])**2.0
-    theta2_z   /= np.abs(eig_Ugx[i][g2])**2.0 + np.abs(eig_Ugy[i][g2])**2.0 + np.abs(eig_Udx[i][g2])**2.0 + np.abs(eig_Udy[i][g2])**2.0
-    theta[i]    = np.sqrt(np.mean(theta2_z))
+    sgrow       = np.amax(freqs[i].real)
 
+    w         =  np.array(eig_W[i][g2])
+    q         =  np.array(eig_Q[i][g2])
+    ugx       =  np.array(eig_Ugx[i][g2])
+    ugy       =  np.array(eig_Ugy[i][g2])
+    ugz       =  np.array(eig_Ugz[i][g2])
+    udx       =  np.array(eig_Udx[i][g2])
+    udy       =  np.array(eig_Udy[i][g2])
+    udz       =  np.array(eig_Udz[i][g2])
+
+    dw   = np.gradient(w, z) 
+    dugx = np.gradient(ugx, z)
+    dugy = np.gradient(ugy, z)
+    dugz = np.gradient(ugz, z)
+    
+    dudx = np.gradient(udx, z)
+    dudy = np.gradient(udy, z)
+    dudz = np.gradient(udz, z)
+
+
+    e2f_tot = simps( (eps2f*sgrow*(np.abs(udx)**2 + 4.0*np.abs(udy)**2 + np.abs(udz)**2) \
+                         + sgrow*(np.abs(ugx)**2 + 4.0*np.abs(ugy)**2 + np.abs(ugz)**2))*rhog(z), z)
+    e2f_A   = simps( (-eps2f*np.real(udz*np.conj(dvdx*udx + 4.0*dvdy*udy + dvdz(z)*udz)) \
+                              -np.real(ugz*np.conj(dvgx*ugx + 4.0*dvgy*ugy)))*rhog(z), z)
+    e2f_A2  = simps((-eps2f*np.real(udz*np.conj(4.0*dvdy*udy)) - np.real(ugz*np.conj(4.0*dvgy*ugy)))*rhog(z), z)
+    e2f_B   = simps((-eps2f*vdz(z)*np.real(dudx*np.conj(udx) + 4.0*dudy*np.conj(udy) + dudz*np.conj(udz)))*rhog(z),z)
+    e2f_C   = simps((kx2f*np.imag(w*np.conj(ugx)) - np.real(dw*np.conj(ugz)))*rhog(z),z)
+    e2f_D   = simps(-(eps2f/stokes)*((vgx - vdx)*np.real(q*np.conj(ugx)) + 4.0*(vgy - vdy)*np.real(q*np.conj(ugy)) \
+                                            - vdz(z)*np.real(q*np.conj(ugz)) \
+                                            + np.abs(ugx - udx)**2 + 4.0*np.abs(ugy - udy)**2 + np.abs(ugz - udz)**2)*rhog(z), z)
+
+    e2f_A  /= e2f_tot
+    e2f_A2 /= e2f_tot
+    e2f_B  /= e2f_tot
+    e2f_C  /= e2f_tot
+    e2f_D  /= e2f_tot
+    
+    energy2f_A_int.append(e2f_A)
+    energy2f_A2_int.append(e2f_A2)
+    energy2f_B_int.append(e2f_B)
+    energy2f_C_int.append(e2f_C)
+    energy2f_D_int.append(e2f_D)
+
+
+    
 '''
 plotting parameters
 '''
@@ -586,29 +680,7 @@ plt.ylabel(r'$z/H_g$',fontsize=fontsize)
 fname = 'stratsi_plot_eigenf2D'
 plt.savefig(fname,dpi=150)
 
-'''
-plot ratio of vertical to horizontal motions
 
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
-plt.xscale('log')
-
-plt.xlim(np.amin(ks),np.amax(ks))
-
-plt.plot(ks, theta, linewidth=2)
-
-plt.rc('font',size=fontsize,weight='bold')
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
-
-plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\sqrt{\frac{|v_{gz}|^2 + |v_{dz}|^2}{|v_{gx}|^2 + |v_{gy}|^2 + |v_{gx}|^2  + |v_{gy}|^2}}$', fontsize=fontsize)
-
-fname = 'stratsi_plot_theta'
-plt.savefig(fname,dpi=150)
-'''
 
 '''
 plot kinetic energy decomposition based on 1-fluid result
@@ -656,7 +728,7 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 plt.xlim(xmin,xmax)
 
 plt.plot(z, energy2f_A, linewidth=2,label='A')
-plt.plot(z_1f, energy2f_A2, linewidth=2,label='A2',color='black',linestyle='dashed')
+plt.plot(z, energy2f_A2, linewidth=2,label='A2',color='black',linestyle='dashed')
 
 plt.plot(z, energy2f_B, linewidth=2,label='B')
 plt.plot(z, energy2f_C, linewidth=2,label='C')
@@ -676,4 +748,42 @@ plt.yticks(fontsize=fontsize,weight='bold')
 plt.ylabel(r'$energy$ $fraction$', fontsize=fontsize)
 
 fname = 'stratsi_plot_energy2f'
+plt.savefig(fname,dpi=150)
+
+'''
+plot energy decomposition (1 fluid)
+'''
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+plt.xscale('log')
+
+plt.xlim(np.amin(ks_1f),np.amax(ks_1f))
+
+energy1f_A_int = np.array(energy1f_A_int)
+energy1f_A2_int = np.array(energy1f_A2_int)
+energy1f_B_int = np.array(energy1f_B_int)
+energy1f_C_int = np.array(energy1f_C_int)
+energy1f_D_int = np.array(energy1f_D_int)
+energy1f_E_int = np.array(energy1f_E_int)
+
+plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='A')
+plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label='A2',color='black',linestyle='dashed')
+plt.plot(ks_1f, energy1f_B_int, linewidth=2,label='B')
+plt.plot(ks_1f, energy1f_C_int, linewidth=2,label='C')
+plt.plot(ks_1f, energy1f_D_int, linewidth=2,label='C')
+plt.plot(ks_1f, energy1f_E_int, linewidth=2,label='C')
+
+plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label='total')
+
+plt.rc('font',size=fontsize,weight='bold')
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$energy$', fontsize=fontsize)
+
+fname = 'stratsi_plot_energy1f_int'
 plt.savefig(fname,dpi=150)

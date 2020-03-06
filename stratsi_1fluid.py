@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400
-kx_max = 1e4
-nkx    = 1
+kx_min = 100
+kx_max = 400
+nkx    = 2
 
 '''
 physics options 
@@ -80,7 +80,7 @@ Diff  = delta0*cs*Hgas
 '''
 numerical options
 '''
-all_solve_dense   = False #solve for all eigenvals for all kx
+all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
 eigen_trial = 3.886269e-1-3.766863e-3*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
