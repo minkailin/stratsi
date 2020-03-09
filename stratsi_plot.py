@@ -88,18 +88,27 @@ if(args.sig):
 else:
     g1          = np.argmax(growth_1f)
 
+sgrow_1f = growth_1f[g1]
+ofreq_1f = freq_1f[g1]
+print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
+
 W1f         = np.array(eig_W1f[n][g1])
 Q1f         = np.array(eig_Q1f[n][g1])
 Ux          = np.array(eig_Ux[n][g1])
 Uy          = np.array(eig_Uy[n][g1])
 Uz          = np.array(eig_Uz[n][g1])
 
-del_rhod1f    = Q1f + W1f
+#normalize eigenfunctions such that at delta rhod/rhod = W+Q is unity (and real) at its maximum
+g2      = np.argmax(np.abs(W1f + Q1f))
+norm_1f = W1f[g2] + Q1f[g2]
 
-sgrow_1f = growth_1f[g1]
-ofreq_1f = freq_1f[g1]
-print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
+W1f /= norm_1f
+Q1f /= norm_1f
+Ux  /= norm_1f
+Uy  /= norm_1f
+Uz  /= norm_1f
 
+del_rhod1f = W1f + Q1f 
 
 '''
 analysis of energy profiles of the most unstable mode based on 1 fluid results 
@@ -119,7 +128,7 @@ dUx = np.gradient(Ux, z_1f)
 dUy = np.gradient(Uy, z_1f)
 dUz = np.gradient(Uz, z_1f)
 
-energy1f_tot = sgrow_1f*(np.abs(Ux)**2 + 4*np.abs(Uy)**2 + np.abs(Uz)**2)
+energy1f_tot = (np.abs(Ux)**2 + 4*np.abs(Uy)**2 + np.abs(Uz)**2)
 
 energy1f_A1 = -(dvx1f*np.real(Uz*np.conj(Ux)))
 energy1f_A2 = -(4.0*dvy1f*np.real(Uz*np.conj(Uy)))
@@ -130,17 +139,18 @@ energy1f_C = (kx_1f*np.imag(W1f*np.conj(Ux)) - np.real(dW1f*np.conj(Uz)))/(1.0 +
 energy1f_D = -2.0*eta_hat*np.real(del_rho1f*np.conj(Ux))/(1.0 + eps1f)
 energy1f_E = -z_1f*eps1f*np.real(Q1f*np.conj(Uz))/(1.0 + eps1f)
 
-energy1f_A/= energy1f_tot
-energy1f_A2/= energy1f_tot
-energy1f_B/= energy1f_tot
-energy1f_C/= energy1f_tot
-energy1f_D/= energy1f_tot
-energy1f_E/= energy1f_tot
+
+energy1f_A2 /= sgrow_1f
+energy1f_A  /= sgrow_1f
+energy1f_B  /= sgrow_1f
+energy1f_C  /= sgrow_1f
+energy1f_D  /= sgrow_1f
+energy1f_E  /= sgrow_1f
 
 '''
 compare integrated energetics for the most unstable mode (at each kx) based on 1 fluid result
 '''
-
+'''
 energy1f_A_int    =[]
 energy1f_A2_int   =[]
 energy1f_B_int    =[]
@@ -149,15 +159,24 @@ energy1f_D_int    =[]
 energy1f_E_int    =[]
 
 for i, kx1f in enumerate(ks_1f):
-    g2          = np.argmax(freqs_1f[i].real)
-    sgrow_1f    = np.amax(freqs_1f[i].real)
+    g3          = np.argmax(freqs_1f[i].real)
+    s1f         = np.amax(freqs_1f[i].real)
         
-    w1f         = np.array(eig_W1f[i][g2])
-    q1f         = np.array(eig_Q1f[i][g2])
-    ux          = np.array(eig_Ux[i][g2])
-    uy          = np.array(eig_Uy[i][g2])
-    uz          = np.array(eig_Uz[i][g2])
+    w1f         = np.array(eig_W1f[i][g3])
+    q1f         = np.array(eig_Q1f[i][g3])
+    ux          = np.array(eig_Ux[i][g3])
+    uy          = np.array(eig_Uy[i][g3])
+    uz          = np.array(eig_Uz[i][g3])
 
+    g4      = np.argmax(np.abs(w1f + q1f))
+    norm_1f = w1f[g4] + q1f[g4]
+
+    w1f /= norm_1f
+    q1f /= norm_1f
+    ux  /= norm_1f
+    uy  /= norm_1f
+    uz  /= norm_1f
+    
     del_rho1f = w1f + eps1f*q1f/(1.0 + eps1f)
 
     dw1f= np.gradient(w1f, z_1f) 
@@ -165,7 +184,7 @@ for i, kx1f in enumerate(ks_1f):
     duy = np.gradient(uy, z_1f)
     duz = np.gradient(uz, z_1f)
 
-    e1f_tot = simps(rho1f*sgrow_1f*(np.abs(ux)**2 + 4*np.abs(uy)**2 + np.abs(uz)**2), z_1f)
+    e1f_tot = simps(rho1f*s1f*(np.abs(ux)**2 + 4*np.abs(uy)**2 + np.abs(uz)**2), z_1f)
 
     e1f_A1 = simps(-(dvx1f*np.real(uz*np.conj(ux)))*rho1f, z_1f)
     e1f_A2 = simps(-(4.0*dvy1f*np.real(uz*np.conj(uy)))*rho1f, z_1f)
@@ -189,7 +208,7 @@ for i, kx1f in enumerate(ks_1f):
     energy1f_C_int.append(e1f_C)
     energy1f_D_int.append(e1f_D)
     energy1f_E_int.append(e1f_E)
-    
+'''    
 
 '''
 read in two-fluid data
@@ -240,6 +259,10 @@ if(args.sig):
 else:
     g1          = np.argmax(growth)
 
+sgrow = growth[g1]
+ofreq = freq[g1]
+print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
+    
 W         =  np.array(eig_W[m][g1])
 Q         =  np.array(eig_Q[m][g1])
 Ugx          =  np.array(eig_Ugx[m][g1])
@@ -249,11 +272,19 @@ Udx          =  np.array(eig_Udx[m][g1])
 Udy          =  np.array(eig_Udy[m][g1])
 Udz          =  np.array(eig_Udz[m][g1])
 
-del_rhod    = Q + W
+g2      = np.argmax(np.abs(W+Q))
+norm    = W[g2] + Q[g2]
 
-sgrow = growth[g1]
-ofreq = freq[g1]
-print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
+W   /= norm
+Q   /= norm
+Ugx /= norm
+Ugy /= norm
+Ugz /= norm
+Udx /= norm
+Udy /= norm
+Udz /= norm
+
+del_rhod = W + Q
 
 '''
 energy analysis
@@ -283,8 +314,8 @@ dUdx = np.gradient(Udx, z)
 dUdy = np.gradient(Udy, z)
 dUdz = np.gradient(Udz, z)
 
-energy2f_tot = eps2f*sgrow*(np.abs(Udx)**2 + 4.0*np.abs(Udy)**2 + np.abs(Udz)**2)
-energy2f_tot+= sgrow*(np.abs(Ugx)**2 + 4.0*np.abs(Ugy)**2 + np.abs(Ugz)**2)
+energy2f_tot = eps2f*(np.abs(Udx)**2 + 4.0*np.abs(Udy)**2 + np.abs(Udz)**2)
+energy2f_tot+= (np.abs(Ugx)**2 + 4.0*np.abs(Ugy)**2 + np.abs(Ugz)**2)
 energy2f_A   =-eps2f*np.real(Udz*np.conj(dvdx*Udx + 4.0*dvdy*Udy + dvdz(z)*Udz))
 energy2f_A  +=-np.real(Ugz*np.conj(dvgx*Ugx + 4.0*dvgy*Ugy))
 energy2f_A2  = -eps2f*np.real(Udz*np.conj(4.0*dvdy*Udy)) - np.real(Ugz*np.conj(4.0*dvgy*Ugy))
@@ -294,16 +325,18 @@ energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*n
 energy2f_D  += np.abs(Ugx - Udx)**2 + 4.0*np.abs(Ugy - Udy)**2 + np.abs(Ugz - Udz)**2
 energy2f_D  *= -eps2f/stokes
 
-energy2f_A /= energy2f_tot
-energy2f_A2 /= energy2f_tot
-energy2f_B /= energy2f_tot
-energy2f_C /= energy2f_tot
-energy2f_D /= energy2f_tot
+
+energy2f_A  /= sgrow
+energy2f_A2 /= sgrow
+energy2f_B  /= sgrow
+energy2f_C  /= sgrow
+energy2f_D  /= sgrow
+
 
 '''
 compare integrated energetics for the most unstable mode (at each kx) based on 2 fluid result
 '''
-
+'''
 energy2f_A_int    =[]
 energy2f_A2_int   =[]
 energy2f_B_int    =[]
@@ -311,18 +344,30 @@ energy2f_C_int    =[]
 energy2f_D_int    =[]
 
 for i, kx2f in enumerate(ks):
-    g2          = np.argmax(freqs[i].real)
-    sgrow       = np.amax(freqs[i].real)
+    g3          = np.argmax(freqs[i].real)
+    s2f         = np.amax(freqs[i].real)
 
-    w         =  np.array(eig_W[i][g2])
-    q         =  np.array(eig_Q[i][g2])
-    ugx       =  np.array(eig_Ugx[i][g2])
-    ugy       =  np.array(eig_Ugy[i][g2])
-    ugz       =  np.array(eig_Ugz[i][g2])
-    udx       =  np.array(eig_Udx[i][g2])
-    udy       =  np.array(eig_Udy[i][g2])
-    udz       =  np.array(eig_Udz[i][g2])
+    w         =  np.array(eig_W[i][g3])
+    q         =  np.array(eig_Q[i][g3])
+    ugx       =  np.array(eig_Ugx[i][g3])
+    ugy       =  np.array(eig_Ugy[i][g3])
+    ugz       =  np.array(eig_Ugz[i][g3])
+    udx       =  np.array(eig_Udx[i][g3])
+    udy       =  np.array(eig_Udy[i][g3])
+    udz       =  np.array(eig_Udz[i][g3])
 
+    g4 = np.argmax(np.abs(w + q))
+    norm    = w[g4] + q[g4]
+
+    w   /= norm
+    q   /= norm
+    ugx /= norm
+    ugy /= norm
+    ugz /= norm
+    udx /= norm
+    udy /= norm
+    ugz /= norm
+    
     dw   = np.gradient(w, z) 
     dugx = np.gradient(ugx, z)
     dugy = np.gradient(ugy, z)
@@ -332,9 +377,8 @@ for i, kx2f in enumerate(ks):
     dudy = np.gradient(udy, z)
     dudz = np.gradient(udz, z)
 
-
-    e2f_tot = simps( (eps2f*sgrow*(np.abs(udx)**2 + 4.0*np.abs(udy)**2 + np.abs(udz)**2) \
-                         + sgrow*(np.abs(ugx)**2 + 4.0*np.abs(ugy)**2 + np.abs(ugz)**2))*rhog(z), z)
+    e2f_tot = simps(s2f*(eps2f*(np.abs(udx)**2 + 4.0*np.abs(udy)**2 + np.abs(udz)**2) \
+                         + (np.abs(ugx)**2 + 4.0*np.abs(ugy)**2 + np.abs(ugz)**2))*rhog(z), z)
     e2f_A   = simps( (-eps2f*np.real(udz*np.conj(dvdx*udx + 4.0*dvdy*udy + dvdz(z)*udz)) \
                               -np.real(ugz*np.conj(dvgx*ugx + 4.0*dvgy*ugy)))*rhog(z), z)
     e2f_A2  = simps((-eps2f*np.real(udz*np.conj(4.0*dvdy*udy)) - np.real(ugz*np.conj(4.0*dvgy*ugy)))*rhog(z), z)
@@ -355,9 +399,8 @@ for i, kx2f in enumerate(ks):
     energy2f_B_int.append(e2f_B)
     energy2f_C_int.append(e2f_C)
     energy2f_D_int.append(e2f_D)
+'''    
 
-
-    
 '''
 plotting parameters
 '''
@@ -525,32 +568,21 @@ plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.125)
 title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
 plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 
-g1 = np.argmax(np.abs(del_rhod1f))
-norm_1f = del_rhod1f[g1]
+axs[0].plot(z_1f, del_rhod1f.real, linewidth=2, label=r'one-fluid, real', color='black')
+axs[0].plot(z_1f, del_rhod1f.imag, linewidth=2, label=r'one-fluid, imag', color='m')
 
-g1 = np.argmax(np.abs(del_rhod))
-norm    = del_rhod[g1]
-
-deleps_1f = del_rhod1f/norm_1f
-deleps    = del_rhod/norm
-
-axs[0].plot(z_1f, deleps_1f.real, linewidth=2, label=r'one-fluid, real', color='black')
-axs[0].plot(z_1f, deleps_1f.imag, linewidth=2, label=r'one-fluid, imag', color='m')
-
-axs[0].plot(z, deleps.real, linewidth=2, label=r'two-fluid, real', color='red', linestyle='dashed')
-axs[0].plot(z, deleps.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
+axs[0].plot(z, del_rhod.real, linewidth=2, label=r'two-fluid, real', color='red', linestyle='dashed')
+axs[0].plot(z, del_rhod.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
 
 axs[0].set_ylabel(r'$\delta\rho_d/\rho_d$')
-#lines1, labels1 = axs[0].get_legend_handles_labels()
-#axs[0].legend(lines1, labels1, loc=(0.6,-0.07), frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
+lines1, labels1 = axs[0].get_legend_handles_labels()
+axs[0].legend(lines1, labels1, loc=(0.6,-0.07), frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
 
-W1f_norm = W1f/norm_1f
-W_norm   = W/norm
-axs[1].plot(z_1f, W1f_norm.real, linewidth=2, label=r'one-fluid, real', color='black')
-axs[1].plot(z_1f, W1f_norm.imag, linewidth=2, label=r'one-fluid, imag', color='m')
+axs[1].plot(z_1f, W1f.real, linewidth=2, label=r'one-fluid, real', color='black')
+axs[1].plot(z_1f, W1f.imag, linewidth=2, label=r'one-fluid, imag', color='m')
 
-axs[1].plot(z, W_norm.real, linewidth=2, label=r'two-fluid, real', color='red', linestyle='dashed')
-axs[1].plot(z, W_norm.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
+axs[1].plot(z, W.real, linewidth=2, label=r'two-fluid, real', color='red', linestyle='dashed')
+axs[1].plot(z, W.imag, linewidth=2, label=r'two-fluid, imag', color='c', linestyle='dashed')
 
 axs[1].set_ylabel(r'$\delta\rho_g/\rho_{g}$')
 axs[1].ticklabel_format(axis='y', style='sci',scilimits=(-2,2))
@@ -559,42 +591,33 @@ axs[1].yaxis.set_major_formatter(FormatStrFormatter('%3.0e'))
 #lines1, labels1 = axs[1].get_legend_handles_labels()
 #axs[1].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
-Ux_norm = Ux/norm_1f
-Ugx_norm = Ugx/norm
-Udx_norm = Udx/norm
-axs[2].plot(z_1f, np.abs(Ux_norm), linewidth=2, label=r'one-fluid', color='black')
-axs[2].plot(z, np.abs(Ugx_norm), linewidth=2, label=r'dust', color='red', linestyle='dashed')
-axs[2].plot(z, np.abs(Udx_norm), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
+axs[2].plot(z_1f, np.abs(Ux), linewidth=2, label=r'one-fluid', color='black')
+axs[2].plot(z, np.abs(Ugx), linewidth=2, label=r'dust', color='red', linestyle='dashed')
+axs[2].plot(z, np.abs(Udx), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
 #axs[2].plot(z_1f, Ux_norm.imag, linewidth=2, color='black')
 #axs[2].plot(z, Ugx_norm.imag, linewidth=2, color='red', linestyle='dashed')
 #axs[2].plot(z, Udx_norm.imag, linewidth=2, color='blue', linestyle='dotted')
 axs[2].set_ylabel(r'$|\delta v_{x}|$')
-#lines1, labels1 = axs[2].get_legend_handles_labels()
-#axs[2].legend(lines1, labels1, loc='right', frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
 
-Uy_norm = Uy/norm_1f
-Ugy_norm = Ugy/norm
-Udy_norm = Udy/norm
-axs[3].plot(z_1f, np.abs(Uy_norm), linewidth=2, label=r'one-fluid', color='black')
-axs[3].plot(z, np.abs(Ugy_norm), linewidth=2, label=r'dust', color='red', linestyle='dashed')
-axs[3].plot(z, np.abs(Udy_norm), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
+lines1, labels1 = axs[2].get_legend_handles_labels()
+axs[2].legend(lines1, labels1, loc='right', frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
+
+axs[3].plot(z_1f, np.abs(Uy), linewidth=2, label=r'one-fluid', color='black')
+axs[3].plot(z, np.abs(Ugy), linewidth=2, label=r'dust', color='red', linestyle='dashed')
+axs[3].plot(z, np.abs(Udy), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
 axs[3].set_ylabel(r'$|\delta v_{y}|$')
 #lines1, labels1 = axs[3].get_legend_handles_labels()
 #axs[3].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
-ymax = np.amax(np.abs(Uy_norm))
+ymax = np.amax(np.abs(Uy))
 #arrbeg = r'\begin{align*}'
 #arrend = r'\end{align*}'
 #plt.rcParams.update(custom_preamble)
 axs[3].annotate(r"$k_xH_g$={0:3.0f}".format(kx)+"\n"+r"s={0:4.2f}$\Omega$".format(sgrow), xy=(0.75*xmax, 0.5*ymax))
 
-
-Uz_norm = Uz/norm_1f
-Ugz_norm = Ugz/norm
-Udz_norm = Udz/norm
-axs[4].plot(z_1f, np.abs(Uz_norm), linewidth=2, label=r'one-fluid', color='black')
-axs[4].plot(z, np.abs(Ugz_norm), linewidth=2, label=r'dust', color='red', linestyle='dashed')
-axs[4].plot(z, np.abs(Udz_norm), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
+axs[4].plot(z_1f, np.abs(Uz), linewidth=2, label=r'one-fluid', color='black')
+axs[4].plot(z, np.abs(Ugz), linewidth=2, label=r'dust', color='red', linestyle='dashed')
+axs[4].plot(z, np.abs(Udz), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
 axs[4].set_ylabel(r'$|\delta v_{z}|$')
 #lines1, labels1 = axs[4].get_legend_handles_labels()
 #axs[4].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
@@ -619,9 +642,9 @@ zaxis  = np.linspace(np.amin(z), np.amax(z), nz)
 
 X, Z = np.meshgrid(xaxis,zaxis)
 
-rhod = np.interp(zaxis, z, deleps)
-vdx  = np.interp(zaxis, z, Udx_norm)
-vdz  = np.interp(zaxis, z, Udz_norm)
+rhod = np.interp(zaxis, z, del_rhod)
+vdx  = np.interp(zaxis, z, Udx)
+vdz  = np.interp(zaxis, z, Udz)
 
 rhod_2D = np.repeat(rhod[...,np.newaxis], nx, axis=1)
 vdx_2D   = np.repeat(vdx[...,np.newaxis], nx, axis=1)
@@ -688,20 +711,20 @@ plot kinetic energy decomposition based on 1-fluid result
 
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 
 plt.xlim(xmin,xmax)
 
-plt.plot(z_1f, energy1f_A, linewidth=2,label='A')
-plt.plot(z_1f, energy1f_A2, linewidth=2,label='A2',color='black',linestyle='dashed')
+plt.plot(z_1f, energy1f_A, linewidth=2,label='$E_1, dv/dz$')
+plt.plot(z_1f, energy1f_A2, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',linestyle='dashed')
 
-plt.plot(z_1f, energy1f_B, linewidth=2,label='B')
-plt.plot(z_1f, energy1f_C, linewidth=2,label='C')
-plt.plot(z_1f, energy1f_D, linewidth=2,label='D')
-plt.plot(z_1f, energy1f_E, linewidth=2,label='E')
-#plt.plot(z_1f, energy1f_F, linewidth=2,label='F')
+plt.plot(z_1f, energy1f_B, linewidth=2,label='$E_2$, vert. settling')
+plt.plot(z_1f, energy1f_C, linewidth=2,label='$E_3$, pressure')
+plt.plot(z_1f, energy1f_D, linewidth=2,label='$E_4$, d-g drift')
+plt.plot(z_1f, energy1f_E, linewidth=2,label='$E_5$, buoyancy')
 
-plt.plot(z_1f, energy1f_A + energy1f_B + energy1f_C + energy1f_D + energy1f_E, linewidth=2,label='total')
+plt.plot(z_1f, energy1f_A + energy1f_B + energy1f_C + energy1f_D + energy1f_E, linewidth=2,label=r'$\sum E_i$')
+plt.plot(z_1f, energy1f_tot, linewidth=2,label=r'total',color='black',linestyle='dotted')
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -711,8 +734,11 @@ legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, font
 plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
+title=r"$k_xH_g$={0:3.0f}".format(kx_1f)+r", s={0:4.2f}$\Omega$".format(sgrow_1f)
+plt.title(title,weight='bold')
+
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$energy$ $fraction$', fontsize=fontsize)
+plt.ylabel(r'$specific$ $energy $', fontsize=fontsize)
 
 fname = 'stratsi_plot_energy1f'
 plt.savefig(fname,dpi=150)
@@ -723,7 +749,7 @@ plot kinetic energy decomposition based on 2-fluid result
 
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 
 plt.xlim(xmin,xmax)
 
@@ -734,7 +760,8 @@ plt.plot(z, energy2f_B, linewidth=2,label='B')
 plt.plot(z, energy2f_C, linewidth=2,label='C')
 plt.plot(z, energy2f_D, linewidth=2,label='D')
 
-plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D, linewidth=2,label='total')
+plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D, linewidth=2,label=r'$\sum$')
+plt.plot(z, energy2f_tot, linewidth=2,label=r'total',color='black',linestyle='dotted')
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -745,7 +772,10 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$energy$ $fraction$', fontsize=fontsize)
+plt.ylabel(r'$specific energy$', fontsize=fontsize)
+
+title=r"$k_xH_g$={0:3.0f}".format(kx)+r", s={0:4.2f}$\Omega$".format(sgrow)
+plt.title(title,weight='bold')
 
 fname = 'stratsi_plot_energy2f'
 plt.savefig(fname,dpi=150)
@@ -753,7 +783,7 @@ plt.savefig(fname,dpi=150)
 '''
 plot energy decomposition (1 fluid)
 '''
-
+'''
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
@@ -783,7 +813,8 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$energy$', fontsize=fontsize)
+plt.ylabel(r'$energy fraction$', fontsize=fontsize)
 
 fname = 'stratsi_plot_energy1f_int'
 plt.savefig(fname,dpi=150)
+'''

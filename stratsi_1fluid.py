@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 100
+kx_min = 1e4
 kx_max = 400
 nkx    = 2
 
@@ -67,7 +67,7 @@ eta_hat   = 0.05
 
 zmin      = 0
 zmax      = 0.05
-nz_waves  = 160
+nz_waves  = 384
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
