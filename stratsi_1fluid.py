@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1e4
+kx_min = 400
 kx_max = 400
-nkx    = 2
+nkx    = 1
 
 '''
 physics options 
@@ -67,7 +67,7 @@ eta_hat   = 0.05
 
 zmin      = 0
 zmax      = 0.05
-nz_waves  = 384
+nz_waves  = 160
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -392,7 +392,7 @@ if __name__ == '__main__':
 
     if tstop == True:
         waves.substitutions['energy_RHS1']="K_over_P0*(dz(dW) + delta_ln_K_p*dln_P0 + delta_ln_K*d2ln_P0 + dln_K0*(delta_ln_K*dln_P0 + W_p) - kx*kx*W)"
-        waves.substitutions['energy_RHS2']="-2*eta_hat*cs*Omega*tau_s*epsilon0/(1+epsilon0)/(1+epsilon0)*ikx*delta_ln_g" #this should be used with ***
+        waves.substitutions['energy_RHS2']="-2*eta_hat*cs*Omega*tau_s*epsilon0/(1+epsilon0)/(1+epsilon0)*ikx*(delta_ln_g + W)" #from a factor of rhog/rho in large-scale press. grad. 
         waves.substitutions['energy_RHS']="energy_RHS1 + energy_RHS2"
     if tstop == False:
         waves.substitutions['energy_RHS']="0" #this requires diffusion = 0 
@@ -403,7 +403,7 @@ if __name__ == '__main__':
         waves.substitutions['xmom_LHS']="sigma*Ux + dvx0*Uz + ikx*vx0*Ux + vz0*dz(Ux)"
     if tstop == False:
         waves.substitutions['xmom_LHS']="sigma*Ux"
-    waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega/(1+epsilon0)*delta_ln_rho + 2*Omega*Uy" #this should be used with ***
+    waves.substitutions['xmom_RHS']="-ikx*P_over_rho*W - 2*eta_hat*cs*Omega*epsilon0/(1+epsilon0)/(1+epsilon0)*Q + 2*Omega*Uy" #from a factor of rhog/rho in large-scale press. grad.   
 
     #y-mom equation
     if tstop == True:

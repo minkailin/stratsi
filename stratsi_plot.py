@@ -136,7 +136,7 @@ energy1f_A3 = -(dvz1f*np.abs(Uz)**2)
 energy1f_A = energy1f_A1 + energy1f_A2 + energy1f_A3
 energy1f_B = -vz1f*np.real(dUx*np.conj(Ux) + 4.0*dUy*np.conj(Uy) + dUz*np.conj(Uz))
 energy1f_C = (kx_1f*np.imag(W1f*np.conj(Ux)) - np.real(dW1f*np.conj(Uz)))/(1.0 + eps1f)
-energy1f_D = -2.0*eta_hat*np.real(del_rho1f*np.conj(Ux))/(1.0 + eps1f)
+energy1f_D = -2.0*eta_hat*np.real(Q1f*np.conj(Ux))*eps1f/(1.0 + eps1f)/(1.0 + eps1f)
 energy1f_E = -z_1f*eps1f*np.real(Q1f*np.conj(Uz))/(1.0 + eps1f)
 
 
@@ -150,7 +150,8 @@ energy1f_E  /= sgrow_1f
 '''
 compare integrated energetics for the most unstable mode (at each kx) based on 1 fluid result
 '''
-'''
+
+energy1f_tot_int  =[]
 energy1f_A_int    =[]
 energy1f_A2_int   =[]
 energy1f_B_int    =[]
@@ -177,14 +178,12 @@ for i, kx1f in enumerate(ks_1f):
     uy  /= norm_1f
     uz  /= norm_1f
     
-    del_rho1f = w1f + eps1f*q1f/(1.0 + eps1f)
-
     dw1f= np.gradient(w1f, z_1f) 
     dux = np.gradient(ux, z_1f)
     duy = np.gradient(uy, z_1f)
     duz = np.gradient(uz, z_1f)
 
-    e1f_tot = simps(rho1f*s1f*(np.abs(ux)**2 + 4*np.abs(uy)**2 + np.abs(uz)**2), z_1f)
+    e1f_tot = simps(rho1f*(np.abs(ux)**2 + 4*np.abs(uy)**2 + np.abs(uz)**2), z_1f)
 
     e1f_A1 = simps(-(dvx1f*np.real(uz*np.conj(ux)))*rho1f, z_1f)
     e1f_A2 = simps(-(4.0*dvy1f*np.real(uz*np.conj(uy)))*rho1f, z_1f)
@@ -192,23 +191,24 @@ for i, kx1f in enumerate(ks_1f):
     e1f_A = e1f_A1 + e1f_A2 + e1f_A3
     e1f_B = simps(-vz1f*np.real(dux*np.conj(ux) + 4.0*duy*np.conj(uy) + duz*np.conj(uz))*rho1f, z_1f)
     e1f_C = simps((kx1f*np.imag(w1f*np.conj(ux)) - np.real(dw1f*np.conj(uz)))/(1.0 + eps1f)*rho1f, z_1f)
-    e1f_D = simps(-2.0*eta_hat*np.real(del_rho1f*np.conj(ux))/(1.0 + eps1f)*rho1f, z_1f)
+    e1f_D = simps(-2.0*eta_hat*np.real(q1f*np.conj(ux))*eps1f/(1.0 + eps1f)/(1.0 + eps1f)*rho1f, z_1f)
     e1f_E = simps(-z_1f*eps1f*np.real(q1f*np.conj(uz))/(1.0 + eps1f)*rho1f, z_1f)
 
-    e1f_A /= e1f_tot
-    e1f_A2/= e1f_tot
-    e1f_B /= e1f_tot
-    e1f_C /= e1f_tot
-    e1f_D /= e1f_tot
-    e1f_E /= e1f_tot
+    e1f_A /= s1f
+    e1f_A2/= s1f
+    e1f_B /= s1f
+    e1f_C /= s1f
+    e1f_D /= s1f
+    e1f_E /= s1f
 
+    energy1f_tot_int.append(e1f_tot)
     energy1f_A_int.append(e1f_A)
     energy1f_A2_int.append(e1f_A2)
     energy1f_B_int.append(e1f_B)
     energy1f_C_int.append(e1f_C)
     energy1f_D_int.append(e1f_D)
     energy1f_E_int.append(e1f_E)
-'''    
+    
 
 '''
 read in two-fluid data
@@ -325,12 +325,20 @@ energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*n
 energy2f_D  += np.abs(Ugx - Udx)**2 + 4.0*np.abs(Ugy - Udy)**2 + np.abs(Ugz - Udz)**2
 energy2f_D  *= -eps2f/stokes
 
+energy2f_D1 = -eps2f/stokes*(vgx - vdx)*np.real(Q*np.conj(Ugx))
+energy2f_D2 = -eps2f/stokes*4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy))
+energy2f_D3 = eps2f/stokes*vdz(z)*np.real(Q*np.conj(Ugz))
+
 
 energy2f_A  /= sgrow
 energy2f_A2 /= sgrow
 energy2f_B  /= sgrow
 energy2f_C  /= sgrow
 energy2f_D  /= sgrow
+energy2f_D1  /= sgrow
+energy2f_D2  /= sgrow
+energy2f_D3  /= sgrow
+
 
 
 '''
@@ -484,7 +492,7 @@ plt.xscale('log')
 for i, k in enumerate(ks_1f):
     g1 = np.argmax(freqs_1f[i].real)
     if i == 0:
-        lab = r'one fluid'
+        lab = r'one-fluid'
     else:
         lab = ''
     axs[0].plot(k, freqs_1f[i][g1].real , marker='o', linestyle='none', markersize=8, label=lab,color='black')
@@ -492,7 +500,7 @@ for i, k in enumerate(ks_1f):
 for i, k in enumerate(ks):
     g1 = np.argmax(freqs[i].real)
     if i == 0:
-        lab = r'two fluid'
+        lab = r'two-fluid'
     else:
         lab = ''
     axs[0].plot(k, freqs[i][g1].real , marker='X', linestyle='none', markersize=8, label=lab,color='red')
@@ -522,7 +530,7 @@ axs[1].set_xlabel(r'$k_xH_g$')
 #lines1, labels1 = axs[1].get_legend_handles_labels()
 #legend=axs[1].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5, fontsize=fontsize/2)
 
-plt.xlim(np.amin(ks),np.amax(ks))
+#plt.xlim(np.amin(ks),np.amax(ks))
 
 fname = 'stratsi_plot_growth_max'
 plt.savefig(fname,dpi=150)
@@ -716,15 +724,15 @@ plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 plt.xlim(xmin,xmax)
 
 plt.plot(z_1f, energy1f_A, linewidth=2,label='$E_1, dv/dz$')
-plt.plot(z_1f, energy1f_A2, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',linestyle='dashed')
+plt.plot(z_1f, energy1f_A2, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',marker='x',linestyle='None',markevery=8)
 
 plt.plot(z_1f, energy1f_B, linewidth=2,label='$E_2$, vert. settling')
 plt.plot(z_1f, energy1f_C, linewidth=2,label='$E_3$, pressure')
-plt.plot(z_1f, energy1f_D, linewidth=2,label='$E_4$, d-g drift')
+plt.plot(z_1f, energy1f_D, linewidth=2,label='$E_4$, dust-gas drift')
 plt.plot(z_1f, energy1f_E, linewidth=2,label='$E_5$, buoyancy')
 
-plt.plot(z_1f, energy1f_A + energy1f_B + energy1f_C + energy1f_D + energy1f_E, linewidth=2,label=r'$\sum E_i$')
-plt.plot(z_1f, energy1f_tot, linewidth=2,label=r'total',color='black',linestyle='dotted')
+plt.plot(z_1f, energy1f_A + energy1f_B + energy1f_C + energy1f_D + energy1f_E, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
+plt.plot(z_1f, energy1f_tot, linewidth=2,label=r'$E_{tot}$',color='black',marker='o',linestyle='None',markevery=8)
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -738,7 +746,7 @@ title=r"$k_xH_g$={0:3.0f}".format(kx_1f)+r", s={0:4.2f}$\Omega$".format(sgrow_1f
 plt.title(title,weight='bold')
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$specific$ $energy $', fontsize=fontsize)
+plt.ylabel(r'$pseudo$-$energy$', fontsize=fontsize)
 
 fname = 'stratsi_plot_energy1f'
 plt.savefig(fname,dpi=150)
@@ -759,6 +767,8 @@ plt.plot(z, energy2f_A2, linewidth=2,label='A2',color='black',linestyle='dashed'
 plt.plot(z, energy2f_B, linewidth=2,label='B')
 plt.plot(z, energy2f_C, linewidth=2,label='C')
 plt.plot(z, energy2f_D, linewidth=2,label='D')
+plt.plot(z, energy2f_D1, linewidth=2,label='D1',marker='x',markevery=8,linestyle='None')
+
 
 plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D, linewidth=2,label=r'$\sum$')
 plt.plot(z, energy2f_tot, linewidth=2,label=r'total',color='black',linestyle='dotted')
@@ -783,7 +793,7 @@ plt.savefig(fname,dpi=150)
 '''
 plot energy decomposition (1 fluid)
 '''
-'''
+
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
@@ -791,21 +801,27 @@ plt.xscale('log')
 
 plt.xlim(np.amin(ks_1f),np.amax(ks_1f))
 
-energy1f_A_int = np.array(energy1f_A_int)
-energy1f_A2_int = np.array(energy1f_A2_int)
-energy1f_B_int = np.array(energy1f_B_int)
-energy1f_C_int = np.array(energy1f_C_int)
-energy1f_D_int = np.array(energy1f_D_int)
-energy1f_E_int = np.array(energy1f_E_int)
+scale=1e4
 
-plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='A')
-plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label='A2',color='black',linestyle='dashed')
-plt.plot(ks_1f, energy1f_B_int, linewidth=2,label='B')
-plt.plot(ks_1f, energy1f_C_int, linewidth=2,label='C')
-plt.plot(ks_1f, energy1f_D_int, linewidth=2,label='C')
-plt.plot(ks_1f, energy1f_E_int, linewidth=2,label='C')
+energy1f_tot_int = np.array(energy1f_tot_int)*scale
+energy1f_A_int = np.array(energy1f_A_int)*scale
+energy1f_A2_int = np.array(energy1f_A2_int)*scale
+energy1f_B_int = np.array(energy1f_B_int)*scale
+energy1f_C_int = np.array(energy1f_C_int)*scale
+energy1f_D_int = np.array(energy1f_D_int)*scale
+energy1f_E_int = np.array(energy1f_E_int)*scale
 
-plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label='total')
+#plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$E_1, dv/dz$')
+#plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',marker='x',linestyle='None')
+
+plt.plot(ks_1f, energy1f_B_int, linewidth=2,label='$E_2$, vert. settling')
+plt.plot(ks_1f, energy1f_C_int, linewidth=2,label='$E_3$, pressure')
+plt.plot(ks_1f, energy1f_D_int, linewidth=2,label='$E_4$, dust-gas drift')
+plt.plot(ks_1f, energy1f_E_int, linewidth=2,label='$E_5$, buoyancy')
+
+#plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
+#plt.plot(ks_1f, energy1f_tot_int, linewidth=2,label=r'$E_{tot}$',color='black',marker='o',linestyle='None')
+
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -813,8 +829,8 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$energy fraction$', fontsize=fontsize)
+plt.ylabel(r'$\int \rho.pseudo$-$eng.$$dz$', fontsize=fontsize)
 
 fname = 'stratsi_plot_energy1f_int'
 plt.savefig(fname,dpi=150)
-'''
+
