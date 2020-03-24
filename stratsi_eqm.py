@@ -232,8 +232,6 @@ plt.rc('font',size=fontsize/1.5,weight='bold')
 
 fig, axs = plt.subplots(5, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,7.5))
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.125)
-title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
-plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 
 axs[0].plot(zaxis, dg, linewidth=2, label=r'dust/gas ratio')
 #axs[0].plot(zaxis,  buoyancy, linewidth=2, label=r'buoyancy', color='black')
@@ -243,6 +241,10 @@ axs[0].set_ylabel(r'$\rho_d/\rho_g$')
 #axs[0].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
 
 #plt.gca().set_prop_cycle(1)
+
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+axs[0].set_title(title,weight='bold')
+
 axs[1].plot(zaxis, gasdens, linewidth=2)
 axs[1].set_ylabel(r'$\rho_g/\rho_{g0}$')
 

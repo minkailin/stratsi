@@ -16,7 +16,7 @@ from scipy.integrate import simps
 #    }
 
 
-from stratsi_params import delta, stokes, metal, epsilon, vdz, dvdz, rhog
+from stratsi_params import alpha, delta, stokes, metal, epsilon, vdz, dvdz, rhog, dln_rhog
 from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat, P_eqm
 
 '''
@@ -303,12 +303,22 @@ dvgy = np.gradient(vgy, z)
 dvdx = np.gradient(vdx, z)
 dvdy = np.gradient(vdy, z)
 
+d2vgx = np.gradient(dvgx, z)
+d2vgy = np.gradient(dvgy, z)
+d2vdx = np.gradient(dvdx, z)
+d2vdy = np.gradient(dvdy, z)
+
 eps2f  = epsilon(z)
 
-dW   = np.gradient(W, z) 
+dW   = np.gradient(W, z)
+
 dUgx = np.gradient(Ugx, z)
 dUgy = np.gradient(Ugy, z)
 dUgz = np.gradient(Ugz, z)
+
+d2Ugx = np.gradient(dUgx, z)
+d2Ugy = np.gradient(dUgy, z)
+d2Ugz = np.gradient(dUgz, z)
 
 dUdx = np.gradient(Udx, z)
 dUdy = np.gradient(Udy, z)
@@ -325,6 +335,19 @@ energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*n
 energy2f_D  += np.abs(Ugx - Udx)**2 + 4.0*np.abs(Ugy - Udy)**2 + np.abs(Ugz - Udz)**2
 energy2f_D  *= -eps2f/stokes
 
+dFx = d2Ugx - (4.0/3.0)*kx*kx*Ugx + (1.0/3.0)*1j*kx*dUgz + dln_rhog(z)*(dUgx + 1j*kx*Ugz)
+dFx-= W*(d2vgx + dln_rhog(z)*dvgx)
+dFx*= alpha
+
+dFy = d2Ugy - kx*kx*Ugy + dln_rhog(z)*dUgy 
+dFy-= W*(d2vgy + dln_rhog(z)*dvgy)
+dFy*= alpha
+
+dFz = (4.0/3.0)*d2Ugz - kx*kx*Ugz + (1.0/3.0)*1j*kx*dUgx + dln_rhog(z)*((4.0/3.0)*dUgz - (2.0/3.0)*1j*kx*Ugx)
+dFz*= alpha
+
+energy2f_E = np.real(dFx*np.conj(Ugx) + 4.0*dFy*np.conj(Ugy) + dFz*np.conj(Ugz))
+
 energy2f_D1 = -eps2f/stokes*(vgx - vdx)*np.real(Q*np.conj(Ugx))
 energy2f_D2 = -eps2f/stokes*4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy))
 energy2f_D3 = eps2f/stokes*vdz(z)*np.real(Q*np.conj(Ugz))
@@ -338,7 +361,7 @@ energy2f_D  /= sgrow
 energy2f_D1  /= sgrow
 energy2f_D2  /= sgrow
 energy2f_D3  /= sgrow
-
+energy2f_E   /= sgrow
 
 
 '''
@@ -430,7 +453,6 @@ plt.rc('font',size=fontsize,weight='bold')
 fig, axs = plt.subplots(2, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,6))
 #plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.15)
 plt.subplots_adjust(left=0.16, right=0.95, top=0.95, bottom=0.15)
-#plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 plt.xscale('log')
 
 for i, k in enumerate(ks_1f):
@@ -452,6 +474,9 @@ for i, k in enumerate(ks):
 axs[0].set_ylabel(r'$s/\Omega$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
 legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5,fontsize=fontsize/2)
+
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+axs[0].set_title(title,weight='bold')
 
 for i, k in enumerate(ks_1f):
     for n, sig in enumerate(freqs_1f[i]):
@@ -486,8 +511,10 @@ plot max growth rates as func of kx
 '''
 
 fig, axs = plt.subplots(2, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,6))
-plt.subplots_adjust(left=0.16, right=0.95, top=0.95, bottom=0.15)
+
+plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.15)
 plt.xscale('log')
+
 
 for i, k in enumerate(ks_1f):
     g1 = np.argmax(freqs_1f[i].real)
@@ -508,6 +535,9 @@ for i, k in enumerate(ks):
 axs[0].set_ylabel(r'$s_\mathrm{max}/\Omega$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
 legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5,fontsize=fontsize/2)
+
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+axs[0].set_title(title,weight='bold')
 
 for i, k in enumerate(ks_1f):
     g1 = np.argmax(freqs_1f[i].real)
@@ -544,8 +574,6 @@ fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 
-title=r"$K_x$={0:4.0f}, St={1:4.0e}, $\delta$={2:4.0e}".format(ks[m], stokes, delta)
-plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold',x=0.55)
 
 plt.scatter(-sigma_1f.imag, sigma_1f.real, marker='o', label=r'one fluid',color='black',s=64)
 plt.scatter(-sigma.imag, sigma.real, marker='X', label=r'two fluid',color='red',s=64)
@@ -561,6 +589,9 @@ plt.xlabel(r'$\omega/\Omega$',fontsize=fontsize)
 plt.yticks(fontsize=fontsize,weight='bold')
 plt.ylabel(r'$s/\Omega$', fontsize=fontsize)
 
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+plt.title(title,weight='bold')
+
 fname = 'stratsi_plot_eigen'
 plt.savefig(fname,dpi=150)
 
@@ -573,8 +604,6 @@ plt.rc('font',size=fontsize/1.5,weight='bold')
 
 fig, axs = plt.subplots(5, sharex=True, sharey=False, gridspec_kw={'hspace': 0.1}, figsize=(8,7.5))
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.125)
-title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
-plt.suptitle(title,y=0.99,fontsize=fontsize,fontweight='bold')
 
 axs[0].plot(z_1f, del_rhod1f.real, linewidth=2, label=r'one-fluid, real', color='black')
 axs[0].plot(z_1f, del_rhod1f.imag, linewidth=2, label=r'one-fluid, imag', color='m')
@@ -585,6 +614,9 @@ axs[0].plot(z, del_rhod.imag, linewidth=2, label=r'two-fluid, imag', color='c', 
 axs[0].set_ylabel(r'$\delta\rho_d/\rho_d$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
 axs[0].legend(lines1, labels1, loc=(0.6,-0.07), frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
+
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+axs[0].set_title(title,weight='bold')
 
 axs[1].plot(z_1f, W1f.real, linewidth=2, label=r'one-fluid, real', color='black')
 axs[1].plot(z_1f, W1f.imag, linewidth=2, label=r'one-fluid, imag', color='m')
@@ -632,8 +664,9 @@ axs[4].set_ylabel(r'$|\delta v_{z}|$')
 
 axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')
 
-#plt.xticks(f,weight='bold')
 plt.xlim(xmin,xmax)
+
+
 
 fname = 'stratsi_plot_eigenfunc'
 plt.savefig(fname,dpi=150)
@@ -721,7 +754,7 @@ fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 
-plt.xlim(xmin,xmax)
+plt.xlim(np.amin(z_1f),np.amax(z_1f))
 
 plt.plot(z_1f, energy1f_A, linewidth=2,label='$E_1, dv/dz$')
 plt.plot(z_1f, energy1f_A2, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',marker='x',linestyle='None',markevery=8)
@@ -767,10 +800,11 @@ plt.plot(z, energy2f_A2, linewidth=2,label='A2',color='black',linestyle='dashed'
 plt.plot(z, energy2f_B, linewidth=2,label='B')
 plt.plot(z, energy2f_C, linewidth=2,label='C')
 plt.plot(z, energy2f_D, linewidth=2,label='D')
-plt.plot(z, energy2f_D1, linewidth=2,label='D1',marker='x',markevery=8,linestyle='None')
+#plt.plot(z, energy2f_D1, linewidth=2,label='D1',marker='x',markevery=8,linestyle='None')
+plt.plot(z, energy2f_E, linewidth=2,label='E')
 
 
-plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D, linewidth=2,label=r'$\sum$')
+plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D + energy2f_E, linewidth=2,label=r'$\sum$')
 plt.plot(z, energy2f_tot, linewidth=2,label=r'total',color='black',linestyle='dotted')
 
 plt.rc('font',size=fontsize,weight='bold')
@@ -782,7 +816,7 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$specific energy$', fontsize=fontsize)
+plt.ylabel(r'$pseudo$-$energy$', fontsize=fontsize)
 
 title=r"$k_xH_g$={0:3.0f}".format(kx)+r", s={0:4.2f}$\Omega$".format(sgrow)
 plt.title(title,weight='bold')
@@ -798,6 +832,7 @@ fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
 plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
 plt.xscale('log')
+plt.yscale('log')
 
 plt.xlim(np.amin(ks_1f),np.amax(ks_1f))
 
@@ -811,16 +846,16 @@ energy1f_C_int = np.array(energy1f_C_int)*scale
 energy1f_D_int = np.array(energy1f_D_int)*scale
 energy1f_E_int = np.array(energy1f_E_int)*scale
 
-#plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$E_1, dv/dz$')
-#plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',marker='x',linestyle='None')
+plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$E_1, dv/dz$')
+plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',marker='x',linestyle='None')
 
 plt.plot(ks_1f, energy1f_B_int, linewidth=2,label='$E_2$, vert. settling')
 plt.plot(ks_1f, energy1f_C_int, linewidth=2,label='$E_3$, pressure')
 plt.plot(ks_1f, energy1f_D_int, linewidth=2,label='$E_4$, dust-gas drift')
 plt.plot(ks_1f, energy1f_E_int, linewidth=2,label='$E_5$, buoyancy')
 
-#plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
-#plt.plot(ks_1f, energy1f_tot_int, linewidth=2,label=r'$E_{tot}$',color='black',marker='o',linestyle='None')
+plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
+plt.plot(ks_1f, energy1f_tot_int, linewidth=2,label=r'$E_{tot}$',color='black',marker='o',linestyle='None')
 
 
 plt.rc('font',size=fontsize,weight='bold')
