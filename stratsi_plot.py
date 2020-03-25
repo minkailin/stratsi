@@ -830,33 +830,43 @@ plot energy decomposition (1 fluid)
 
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
-plt.subplots_adjust(left=0.18, right=0.95, top=0.95, bottom=0.2)
+plt.subplots_adjust(left=0.185, right=0.95, top=0.9, bottom=0.2)
 plt.xscale('log')
-plt.yscale('log')
+#plt.yscale('log')
 
 plt.xlim(np.amin(ks_1f),np.amax(ks_1f))
 
-scale=1e4
+energy1f_tot_int = np.cbrt(energy1f_tot_int)
+energy1f_A_int = np.cbrt(energy1f_A_int)
+energy1f_A2_int = np.cbrt(energy1f_A2_int)
+energy1f_B_int = np.cbrt(energy1f_B_int)
+energy1f_C_int = np.cbrt(energy1f_C_int)
+energy1f_D_int = np.cbrt(energy1f_D_int)
+energy1f_E_int = np.cbrt(energy1f_E_int)
 
-energy1f_tot_int = np.array(energy1f_tot_int)*scale
-energy1f_A_int = np.array(energy1f_A_int)*scale
-energy1f_A2_int = np.array(energy1f_A2_int)*scale
-energy1f_B_int = np.array(energy1f_B_int)*scale
-energy1f_C_int = np.array(energy1f_C_int)*scale
-energy1f_D_int = np.array(energy1f_D_int)*scale
-energy1f_E_int = np.array(energy1f_E_int)*scale
 
-plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$E_1, dv/dz$')
-plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label=r'$E_{1y}$, $dv_y/dz$',color='black',marker='x',linestyle='None')
+#plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$dv/dz$')
+plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label='$dv_y/dz$')
+plt.plot(ks_1f, energy1f_B_int, linewidth=2,label='vert. settling')
+plt.plot(ks_1f, energy1f_C_int, linewidth=2,label='pressure')
+plt.plot(ks_1f, energy1f_D_int, linewidth=2,label='dust-gas drift')
+plt.plot(ks_1f, energy1f_E_int, linewidth=2,label='buoyancy')
 
-plt.plot(ks_1f, energy1f_B_int, linewidth=2,label='$E_2$, vert. settling')
-plt.plot(ks_1f, energy1f_C_int, linewidth=2,label='$E_3$, pressure')
-plt.plot(ks_1f, energy1f_D_int, linewidth=2,label='$E_4$, dust-gas drift')
-plt.plot(ks_1f, energy1f_E_int, linewidth=2,label='$E_5$, buoyancy')
+'''
+plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label=r'$dv_y/dz$',color='black',marker='x',linestyle='None',markevery=2)
+plt.plot(ks_1f, energy1f_B_int, linestyle='None', marker='x',label='vert. settling',markevery=2)
+plt.plot(ks_1f, energy1f_C_int, linestyle='None', marker='x',label='pressure',markevery=2)
+plt.plot(ks_1f, energy1f_D_int, linestyle='None',label='dust-gas drift',marker='x',markevery=2)
+plt.plot(ks_1f, energy1f_E_int, linestyle='None', marker='x',label='buoyancy',markevery=2)
+'''
 
-plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
-plt.plot(ks_1f, energy1f_tot_int, linewidth=2,label=r'$E_{tot}$',color='black',marker='o',linestyle='None')
+#plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
+plt.plot(ks_1f, energy1f_tot_int, linewidth=2,label=r'total',color='black',marker='o',linestyle='None',markevery=2)
 
+plt.plot([1e2,1e4], [0,0], linewidth=1,linestyle='dashed',color='black')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, fontsize=fontsize/2)
 
 plt.rc('font',size=fontsize,weight='bold')
 
@@ -864,7 +874,11 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$\int \rho.pseudo$-$eng.$$dz$', fontsize=fontsize)
+plt.ylabel(r'$\left(\int \rho E_i dz\right)^{1/3}$', fontsize=fontsize)
+
+
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+plt.title(title,weight='bold')
 
 fname = 'stratsi_plot_energy1f_int'
 plt.savefig(fname,dpi=150)
