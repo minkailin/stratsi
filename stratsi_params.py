@@ -34,7 +34,7 @@ dust parameters
 '''
 dg0      = 2.0     #midplane d/g ratio
 metal    = 0.03    #metallicity  
-stokes   = 1e-2    #assume a constant stokes number throughout 
+stokes   = 1e-4    #assume a constant stokes number throughout 
 
 delta    = alpha*(1.0 + stokes + 4.0*stokes*stokes)/(1.0+stokes*stokes)**2
 beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
@@ -43,16 +43,16 @@ beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
 grid parameters
 '''
 zmin    = 0.0
-zmax    = 0.05
+zmax    = 0.5
 nz_vert = 1024
 
 '''
 mode parameters
 '''
 kx     = 400.0
-kx_min = 400
-kx_max = 400
-nkx    = 1
+kx_min = 1e2
+kx_max = 1e4
+nkx    = 10
 
 '''
 vertical resolution
@@ -75,7 +75,7 @@ all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
 eigen_trial = 3.902597e-1-4.110389e-3*1j #0.336815 -1j*0.020939 #trial eigenvalue
-sig_filter = 1e10 #mode filter, only allow |sigma| < sig_filter
+growth_filter = 2.0 #mode filter, only allow growth rates < growth_filter
 tol = 1e-12
 
 '''

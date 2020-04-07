@@ -17,7 +17,7 @@ from scipy.integrate import simps
 
 
 from stratsi_params import alpha, delta, stokes, metal, epsilon, vdz, dvdz, rhog, dln_rhog
-from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat, P_eqm
+from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat, P_eqm#, z_maxvshear, maxvshear
 
 '''
 process command line arguements
@@ -523,7 +523,9 @@ for i, k in enumerate(ks_1f):
     else:
         lab = ''
     axs[0].plot(k, freqs_1f[i][g1].real , marker='o', linestyle='none', markersize=8, label=lab,color='black')
-    
+
+#axs[0].axhline(y=maxvshear, linestyle='dashed', linewidth=1, label=r'$max\left|dv_y/dz\right|/\Omega$')
+
 for i, k in enumerate(ks):
     g1 = np.argmax(freqs[i].real)
     if i == 0:
@@ -531,7 +533,8 @@ for i, k in enumerate(ks):
     else:
         lab = ''
     axs[0].plot(k, freqs[i][g1].real , marker='X', linestyle='none', markersize=8, label=lab,color='red')
-    
+
+
 axs[0].set_ylabel(r'$s_\mathrm{max}/\Omega$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
 legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5,fontsize=fontsize/2)
@@ -766,6 +769,8 @@ plt.plot(z_1f, energy1f_E, linewidth=2,label='$E_5$, buoyancy')
 
 plt.plot(z_1f, energy1f_A + energy1f_B + energy1f_C + energy1f_D + energy1f_E, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
 plt.plot(z_1f, energy1f_tot, linewidth=2,label=r'$E_{tot}$',color='black',marker='o',linestyle='None',markevery=8)
+
+#ax.axvline(x=z_maxvshear, linestyle='dashed', linewidth=1, label=r'$max\left|dv_y/dz\right|/\Omega$')
 
 plt.rc('font',size=fontsize,weight='bold')
 

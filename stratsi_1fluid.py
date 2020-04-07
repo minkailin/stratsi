@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400
-kx_max = 400
-nkx    = 1
+kx_min = 1e2
+kx_max = 1e4
+nkx    = 10
 
 '''
 physics options 
@@ -60,14 +60,14 @@ if((tstop == False) and (diffusion == True)):
 problem parameters
 '''
 alpha0    = 1e-6
-st0       = 1e-2
+st0       = 1e-4
 dg0       = 2.0
 metal     = 0.03#0.00135
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.05
-nz_waves  = 160
+zmax      = 0.5
+nz_waves  = 256
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -84,7 +84,7 @@ all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
 eigen_trial = 3.886269e-1-3.766863e-3*1j # 0.3383573 - 1j*0.09757691 #trial eigenvalue in units of Omega
-sig_filter = 10*Omega #mode filter, only allow |sigma| < sig_filter
+growth_filter = 2.0*Omega #mode filter, only allow growth rates < growth_filter
 tol = 1e-12
 
 '''
@@ -234,6 +234,15 @@ if fix_metal == True:
     dg0 = get_dg0_from_metal()
     print("adjust midplane d/g={0:4.2f} to satisfy Z={1:4.2f}".format(dg0, metal))
 
+#get location and magnitude of maximum vertical shear in azi velocity
+def max_vshear_func(x):
+    z = np.sqrt(x*delta0*Hgas*Hgas/st0)
+    return  (x - 1)/(x + 1) - epsilon_eqm(z)
+
+chi_max       = broyden1(max_vshear_func, 1.0)
+z_maxvshear   = np.sqrt(chi_max*delta0/st0)
+maxvshear     = np.abs(dvy_eqm(z_maxvshear))
+    
 if __name__ == '__main__':
     
     '''
@@ -503,8 +512,7 @@ if __name__ == '__main__':
 
         EP.reject_spurious()
 
-        abs_sig = np.abs(EP.evalues_good)
-        sig_acceptable = (abs_sig < sig_filter) & (EP.evalues_good.real > 0.0)
+        sig_acceptable = (EP.evalues_good.real > 0.0) & (EP.evalues_good.real < growth_filter)
 
         sigma      = EP.evalues_good[sig_acceptable]
         sigma_index= EP.evalues_good_index[sig_acceptable]

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
 import scipy.sparse.linalg
-tol = 1e-12
+tol = 1e-12 ; tol_eigen=1e-6
 class Eigenproblem():
     def __init__(self, EVP, sparse=False):
         """
@@ -220,7 +220,7 @@ class Eigenproblem():
         delta_near = np.array([np.nanmin(np.abs(lambda1_sorted[j] - lambda2_sorted)/sigmas[j]) for j in range(len(lambda1_sorted))])
     
         # Discard eigenvalues with 1/delta_near < 10^6
-        lambda1_and_indx = lambda1_and_indx[np.where((1.0/delta_near) > 1E6)]
+        lambda1_and_indx = lambda1_and_indx[np.where((1.0/delta_near) > 1.0/tol_eigen)] 
         #print(lambda1_and_indx)
         
         lambda1 = lambda1_and_indx[:, 0]

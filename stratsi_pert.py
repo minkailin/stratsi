@@ -319,8 +319,7 @@ for i, kx in enumerate(kx_space):
 
     EP.reject_spurious()
 
-    abs_sig = np.abs(EP.evalues_good)
-    sig_acceptable = (abs_sig < sig_filter) & (EP.evalues_good.real > 0.0)
+    sig_acceptable = (EP.evalues_good.real > 0.0) & (EP.evalues_good.real < growth_filter)
 
     sigma      = EP.evalues_good[sig_acceptable]
     sigma_index= EP.evalues_good_index[sig_acceptable]
