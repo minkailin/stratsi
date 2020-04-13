@@ -34,7 +34,7 @@ dust parameters
 '''
 dg0      = 2.0     #midplane d/g ratio
 metal    = 0.03    #metallicity  
-stokes   = 1e-4    #assume a constant stokes number throughout 
+stokes   = 1e-2    #assume a constant stokes number throughout 
 
 delta    = alpha*(1.0 + stokes + 4.0*stokes*stokes)/(1.0+stokes*stokes)**2
 beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
@@ -43,16 +43,16 @@ beta     = (1.0/stokes - (1.0/stokes)*np.sqrt(1.0 - 4.0*stokes**2))/2.0
 grid parameters
 '''
 zmin    = 0.0
-zmax    = 0.5
+zmax    = 0.05
 nz_vert = 1024
 
 '''
 mode parameters
 '''
 kx     = 400.0
-kx_min = 1e2
+kx_min = 400
 kx_max = 1e4
-nkx    = 10
+nkx    = 1
 
 '''
 vertical resolution

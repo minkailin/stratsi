@@ -16,7 +16,7 @@ from scipy.integrate import simps
 #    }
 
 
-from stratsi_params import alpha, delta, stokes, metal, epsilon, vdz, dvdz, rhog, dln_rhog
+from stratsi_params import alpha, delta, stokes, metal, epsilon, vdz, dvdz, rhog, dln_rhog, viscosity_pert
 from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat, P_eqm#, z_maxvshear, maxvshear
 
 '''
@@ -331,22 +331,27 @@ energy2f_A  +=-np.real(Ugz*np.conj(dvgx*Ugx + 4.0*dvgy*Ugy))
 energy2f_A2  = -eps2f*np.real(Udz*np.conj(4.0*dvdy*Udy)) - np.real(Ugz*np.conj(4.0*dvgy*Ugy))
 energy2f_B   =-eps2f*vdz(z)*np.real(dUdx*np.conj(Udx) + 4.0*dUdy*np.conj(Udy) + dUdz*np.conj(Udz))
 energy2f_C   = kx*np.imag(W*np.conj(Ugx)) - np.real(dW*np.conj(Ugz))
-energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy)) - vdz(z)*np.real(Q*np.conj(Ugz))
+energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy)) #- vdz(z)*np.real(Q*np.conj(Ugz))
 energy2f_D  += np.abs(Ugx - Udx)**2 + 4.0*np.abs(Ugy - Udy)**2 + np.abs(Ugz - Udz)**2
 energy2f_D  *= -eps2f/stokes
 
-dFx = d2Ugx - (4.0/3.0)*kx*kx*Ugx + (1.0/3.0)*1j*kx*dUgz + dln_rhog(z)*(dUgx + 1j*kx*Ugz)
-dFx-= W*(d2vgx + dln_rhog(z)*dvgx)
-dFx*= alpha
+energy2f_E = (eps2f/stokes)*vdz(z)*np.real(Q*np.conj(Ugz))#buoyancy in 2fluid
 
-dFy = d2Ugy - kx*kx*Ugy + dln_rhog(z)*dUgy 
-dFy-= W*(d2vgy + dln_rhog(z)*dvgy)
-dFy*= alpha
+if viscosity_pert == True:
+    dFx = d2Ugx - (4.0/3.0)*kx*kx*Ugx + (1.0/3.0)*1j*kx*dUgz + dln_rhog(z)*(dUgx + 1j*kx*Ugz)
+    dFx-= W*(d2vgx + dln_rhog(z)*dvgx)
+    dFx*= alpha
 
-dFz = (4.0/3.0)*d2Ugz - kx*kx*Ugz + (1.0/3.0)*1j*kx*dUgx + dln_rhog(z)*((4.0/3.0)*dUgz - (2.0/3.0)*1j*kx*Ugx)
-dFz*= alpha
+    dFy = d2Ugy - kx*kx*Ugy + dln_rhog(z)*dUgy 
+    dFy-= W*(d2vgy + dln_rhog(z)*dvgy)
+    dFy*= alpha
 
-energy2f_E = np.real(dFx*np.conj(Ugx) + 4.0*dFy*np.conj(Ugy) + dFz*np.conj(Ugz))
+    dFz = (4.0/3.0)*d2Ugz - kx*kx*Ugz + (1.0/3.0)*1j*kx*dUgx + dln_rhog(z)*((4.0/3.0)*dUgz - (2.0/3.0)*1j*kx*Ugx)
+    dFz*= alpha
+    
+    energy2f_F = np.real(dFx*np.conj(Ugx) + 4.0*dFy*np.conj(Ugy) + dFz*np.conj(Ugz))
+else:
+    energy2f_F = np.zeros(z.size)
 
 energy2f_D1 = -eps2f/stokes*(vgx - vdx)*np.real(Q*np.conj(Ugx))
 energy2f_D2 = -eps2f/stokes*4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy))
@@ -362,7 +367,7 @@ energy2f_D1  /= sgrow
 energy2f_D2  /= sgrow
 energy2f_D3  /= sgrow
 energy2f_E   /= sgrow
-
+energy2f_F   /= sgrow
 
 '''
 compare integrated energetics for the most unstable mode (at each kx) based on 2 fluid result
@@ -799,18 +804,18 @@ plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 
 plt.xlim(xmin,xmax)
 
-plt.plot(z, energy2f_A, linewidth=2,label='A')
-plt.plot(z, energy2f_A2, linewidth=2,label='A2',color='black',linestyle='dashed')
+plt.plot(z, energy2f_A, linewidth=2,label='$U_1, dv/dz$')
+plt.plot(z, energy2f_A2, linewidth=2,label='$U_{1y}$, $dv_y/dz$', color='black',marker='x',linestyle='None',markevery=8)
 
-plt.plot(z, energy2f_B, linewidth=2,label='B')
-plt.plot(z, energy2f_C, linewidth=2,label='C')
-plt.plot(z, energy2f_D, linewidth=2,label='D')
-#plt.plot(z, energy2f_D1, linewidth=2,label='D1',marker='x',markevery=8,linestyle='None')
-plt.plot(z, energy2f_E, linewidth=2,label='E')
+plt.plot(z, energy2f_B, linewidth=2,label='$U_2$, vert. settling')
+plt.plot(z, energy2f_C, linewidth=2,label='$U_3$, pressure')
+plt.plot(z, energy2f_D, linewidth=2,label='$U_4$, dust-gas drift')
+plt.plot(z, energy2f_E, linewidth=2,label='$U_5$, buoyancy')
+if viscosity_pert == True:
+    plt.plot(z, energy2f_F, linewidth=2,label='$U_6$, viscosity')
 
-
-plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D + energy2f_E, linewidth=2,label=r'$\sum$')
-plt.plot(z, energy2f_tot, linewidth=2,label=r'total',color='black',linestyle='dotted')
+plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D + energy2f_E + energy2f_F, linewidth=2,label=r'$\sum$',linestyle='dashed')
+plt.plot(z, energy2f_tot, linewidth=2,label=r'total',color='black',marker='o',linestyle='None',markevery=8)
 
 plt.rc('font',size=fontsize,weight='bold')
 
