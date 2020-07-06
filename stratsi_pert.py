@@ -8,7 +8,7 @@ from eigenproblem import Eigenproblem
 '''
 output control
 '''
-nz_out   = 1024
+nz_out   = nz_vert
 out_scale= nz_out/nz_waves
 
 '''
