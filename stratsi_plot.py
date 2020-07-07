@@ -326,12 +326,14 @@ dUdz = np.gradient(Udz, z)
 
 energy2f_tot = eps2f*(np.abs(Udx)**2 + 4.0*np.abs(Udy)**2 + np.abs(Udz)**2)
 energy2f_tot+= (np.abs(Ugx)**2 + 4.0*np.abs(Ugy)**2 + np.abs(Ugz)**2)
+#energy2f_tot/= (1.0 + eps2f)
+
 energy2f_A   =-eps2f*np.real(Udz*np.conj(dvdx*Udx + 4.0*dvdy*Udy + dvdz(z)*Udz))
 energy2f_A  +=-np.real(Ugz*np.conj(dvgx*Ugx + 4.0*dvgy*Ugy))
 energy2f_A2  = -eps2f*np.real(Udz*np.conj(4.0*dvdy*Udy)) - np.real(Ugz*np.conj(4.0*dvgy*Ugy))
 energy2f_B   =-eps2f*vdz(z)*np.real(dUdx*np.conj(Udx) + 4.0*dUdy*np.conj(Udy) + dUdz*np.conj(Udz))
 energy2f_C   = kx*np.imag(W*np.conj(Ugx)) - np.real(dW*np.conj(Ugz))
-energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy)) #- vdz(z)*np.real(Q*np.conj(Ugz))
+energy2f_D   = (vgx - vdx)*np.real(Q*np.conj(Ugx)) + 4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy))
 energy2f_D  += np.abs(Ugx - Udx)**2 + 4.0*np.abs(Ugy - Udy)**2 + np.abs(Ugz - Udz)**2
 energy2f_D  *= -eps2f/stokes
 
@@ -353,31 +355,25 @@ if viscosity_pert == True:
 else:
     energy2f_F = np.zeros(z.size)
 
-energy2f_D1 = -eps2f/stokes*(vgx - vdx)*np.real(Q*np.conj(Ugx))
-energy2f_D2 = -eps2f/stokes*4.0*(vgy - vdy)*np.real(Q*np.conj(Ugy))
-energy2f_D3 = eps2f/stokes*vdz(z)*np.real(Q*np.conj(Ugz))
-
-
-energy2f_A  /= sgrow
-energy2f_A2 /= sgrow
-energy2f_B  /= sgrow
-energy2f_C  /= sgrow
-energy2f_D  /= sgrow
-energy2f_D1  /= sgrow
-energy2f_D2  /= sgrow
-energy2f_D3  /= sgrow
-energy2f_E   /= sgrow
-energy2f_F   /= sgrow
+energy2f_A  /= sgrow#*(1.0 + eps2f)
+energy2f_A2 /= sgrow#*(1.0 + eps2f)
+energy2f_B  /= sgrow#*(1.0 + eps2f)
+energy2f_C  /= sgrow#*(1.0 + eps2f)
+energy2f_D  /= sgrow#*(1.0 + eps2f)
+energy2f_E   /= sgrow#*(1.0 + eps2f)
+energy2f_F   /= sgrow#*(1.0 + eps2f)
 
 '''
 compare integrated energetics for the most unstable mode (at each kx) based on 2 fluid result
 '''
-'''
+energy2f_tot_int  =[]
 energy2f_A_int    =[]
 energy2f_A2_int   =[]
 energy2f_B_int    =[]
 energy2f_C_int    =[]
 energy2f_D_int    =[]
+energy2f_E_int    =[]
+energy2f_F_int    =[]
 
 for i, kx2f in enumerate(ks):
     g3          = np.argmax(freqs[i].real)
@@ -402,40 +398,65 @@ for i, kx2f in enumerate(ks):
     ugz /= norm
     udx /= norm
     udy /= norm
-    ugz /= norm
+    udz /= norm
     
     dw   = np.gradient(w, z) 
     dugx = np.gradient(ugx, z)
     dugy = np.gradient(ugy, z)
     dugz = np.gradient(ugz, z)
-    
+
+    d2ugx= np.gradient(dugx, z)
+    d2ugy= np.gradient(dugy, z)
+    d2ugz= np.gradient(dugz, z)
+
     dudx = np.gradient(udx, z)
     dudy = np.gradient(udy, z)
     dudz = np.gradient(udz, z)
 
-    e2f_tot = simps(s2f*(eps2f*(np.abs(udx)**2 + 4.0*np.abs(udy)**2 + np.abs(udz)**2) \
+    e2f_tot = simps((eps2f*(np.abs(udx)**2 + 4.0*np.abs(udy)**2 + np.abs(udz)**2) \
                          + (np.abs(ugx)**2 + 4.0*np.abs(ugy)**2 + np.abs(ugz)**2))*rhog(z), z)
-    e2f_A   = simps( (-eps2f*np.real(udz*np.conj(dvdx*udx + 4.0*dvdy*udy + dvdz(z)*udz)) \
+    e2f_A   = simps((-eps2f*np.real(udz*np.conj(dvdx*udx + 4.0*dvdy*udy + dvdz(z)*udz)) \
                               -np.real(ugz*np.conj(dvgx*ugx + 4.0*dvgy*ugy)))*rhog(z), z)
     e2f_A2  = simps((-eps2f*np.real(udz*np.conj(4.0*dvdy*udy)) - np.real(ugz*np.conj(4.0*dvgy*ugy)))*rhog(z), z)
     e2f_B   = simps((-eps2f*vdz(z)*np.real(dudx*np.conj(udx) + 4.0*dudy*np.conj(udy) + dudz*np.conj(udz)))*rhog(z),z)
     e2f_C   = simps((kx2f*np.imag(w*np.conj(ugx)) - np.real(dw*np.conj(ugz)))*rhog(z),z)
     e2f_D   = simps(-(eps2f/stokes)*((vgx - vdx)*np.real(q*np.conj(ugx)) + 4.0*(vgy - vdy)*np.real(q*np.conj(ugy)) \
-                                            - vdz(z)*np.real(q*np.conj(ugz)) \
                                             + np.abs(ugx - udx)**2 + 4.0*np.abs(ugy - udy)**2 + np.abs(ugz - udz)**2)*rhog(z), z)
-
-    e2f_A  /= e2f_tot
-    e2f_A2 /= e2f_tot
-    e2f_B  /= e2f_tot
-    e2f_C  /= e2f_tot
-    e2f_D  /= e2f_tot
+    e2f_E   = simps((eps2f/stokes)*vdz(z)*np.real(q*np.conj(ugz))*rhog(z),z)
     
+    if viscosity_pert == True:
+        dfx = d2ugx - (4.0/3.0)*kx2f*kx2f*ugx + (1.0/3.0)*1j*kx2f*dugz + dln_rhog(z)*(dugx + 1j*kx*ugz)
+        dfx-= w*(d2vgx + dln_rhog(z)*dvgx)
+        dfx*= alpha
+
+        dfy = d2ugy - kx2f*kx2f*ugy + dln_rhog(z)*dugy 
+        dfy-= w*(d2vgy + dln_rhog(z)*dvgy)
+        dfy*= alpha
+
+        dFz = (4.0/3.0)*d2ugz - kx2f*kx2f*ugz + (1.0/3.0)*1j*kx*dugx + dln_rhog(z)*((4.0/3.0)*dugz - (2.0/3.0)*1j*kx*ugx)
+        dFz*= alpha
+    
+        e2f_F=simps((np.real(dfx*np.conj(ugx) + 4.0*dfy*np.conj(ugy) + dfz*np.conj(ugz)))*rhog(z), z)
+    else:
+        e2f_F = 0.0
+
+    e2f_A  /= s2f
+    e2f_A2 /= s2f
+    e2f_B  /= s2f
+    e2f_C  /= s2f
+    e2f_D  /= s2f
+    e2f_E  /= s2f
+    e2f_F  /= s2f
+
+    energy2f_tot_int.append(e2f_tot)
     energy2f_A_int.append(e2f_A)
     energy2f_A2_int.append(e2f_A2)
     energy2f_B_int.append(e2f_B)
     energy2f_C_int.append(e2f_C)
     energy2f_D_int.append(e2f_D)
-'''    
+    energy2f_E_int.append(e2f_E)
+    energy2f_F_int.append(e2f_F)
+       
 
 '''
 plotting parameters
@@ -674,8 +695,6 @@ axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')
 
 plt.xlim(xmin,xmax)
 
-
-
 fname = 'stratsi_plot_eigenfunc'
 plt.savefig(fname,dpi=150)
 
@@ -794,6 +813,7 @@ plt.ylabel(r'$pseudo$-$energy$', fontsize=fontsize)
 fname = 'stratsi_plot_energy1f'
 plt.savefig(fname,dpi=150)
 
+
 '''
 plot kinetic energy decomposition based on 2-fluid result
 '''
@@ -807,20 +827,20 @@ plt.xlim(xmin,xmax)
 plt.plot(z, energy2f_A, linewidth=2,label='$U_1, dv/dz$')
 plt.plot(z, energy2f_A2, linewidth=2,label='$U_{1y}$, $dv_y/dz$', color='black',marker='x',linestyle='None',markevery=8)
 
-plt.plot(z, energy2f_B, linewidth=2,label='$U_2$, vert. settling')
-plt.plot(z, energy2f_C, linewidth=2,label='$U_3$, pressure')
+plt.plot(z, energy2f_B, linewidth=2,label='$U_2$, dust settling')
+plt.plot(z, energy2f_C, linewidth=2,label='$U_3$, gas pressure')
 plt.plot(z, energy2f_D, linewidth=2,label='$U_4$, dust-gas drift')
 plt.plot(z, energy2f_E, linewidth=2,label='$U_5$, buoyancy')
 if viscosity_pert == True:
     plt.plot(z, energy2f_F, linewidth=2,label='$U_6$, viscosity')
-
-plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D + energy2f_E + energy2f_F, linewidth=2,label=r'$\sum$',linestyle='dashed')
-plt.plot(z, energy2f_tot, linewidth=2,label=r'total',color='black',marker='o',linestyle='None',markevery=8)
+    
+plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D + energy2f_E + energy2f_F, linewidth=2,label=r'$\sum U_i$',linestyle='dashed')
+plt.plot(z, energy2f_tot, linewidth=2,label=r'$U_{tot}$',color='black',marker='o',linestyle='None',markevery=8)
 
 plt.rc('font',size=fontsize,weight='bold')
 
 lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2)
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2, labelspacing=0.4)
 
 plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
@@ -835,7 +855,7 @@ fname = 'stratsi_plot_energy2f'
 plt.savefig(fname,dpi=150)
 
 '''
-plot energy decomposition (1 fluid)
+plot energy decomposition as a function of kx (1 fluid)
 '''
 
 fig = plt.figure(figsize=(8,4.5))
@@ -854,7 +874,6 @@ energy1f_C_int = np.cbrt(energy1f_C_int)
 energy1f_D_int = np.cbrt(energy1f_D_int)
 energy1f_E_int = np.cbrt(energy1f_E_int)
 
-
 #plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$dv/dz$')
 plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label='$dv_y/dz$')
 plt.plot(ks_1f, energy1f_B_int, linewidth=2,label='vert. settling')
@@ -862,15 +881,6 @@ plt.plot(ks_1f, energy1f_C_int, linewidth=2,label='pressure')
 plt.plot(ks_1f, energy1f_D_int, linewidth=2,label='dust-gas drift')
 plt.plot(ks_1f, energy1f_E_int, linewidth=2,label='buoyancy')
 
-'''
-plt.plot(ks_1f, energy1f_A2_int, linewidth=2,label=r'$dv_y/dz$',color='black',marker='x',linestyle='None',markevery=2)
-plt.plot(ks_1f, energy1f_B_int, linestyle='None', marker='x',label='vert. settling',markevery=2)
-plt.plot(ks_1f, energy1f_C_int, linestyle='None', marker='x',label='pressure',markevery=2)
-plt.plot(ks_1f, energy1f_D_int, linestyle='None',label='dust-gas drift',marker='x',markevery=2)
-plt.plot(ks_1f, energy1f_E_int, linestyle='None', marker='x',label='buoyancy',markevery=2)
-'''
-
-#plt.plot(ks_1f, energy1f_A_int + energy1f_B_int + energy1f_C_int + energy1f_D_int + energy1f_E_int, linewidth=2,label=r'$\sum E_i$',linestyle='dashed')
 plt.plot(ks_1f, energy1f_tot_int, linewidth=2,label=r'total',color='black',marker='o',linestyle='None',markevery=2)
 
 plt.plot([1e2,1e4], [0,0], linewidth=1,linestyle='dashed',color='black')
@@ -893,3 +903,53 @@ plt.title(title,weight='bold')
 fname = 'stratsi_plot_energy1f_int'
 plt.savefig(fname,dpi=150)
 
+
+'''
+plot energy decomposition as a function of kx (2 fluid)
+'''
+
+fig = plt.figure(figsize=(8,4.5))
+ax = fig.add_subplot()
+plt.subplots_adjust(left=0.185, right=0.95, top=0.9, bottom=0.2)
+plt.xscale('log')
+
+plt.xlim(np.amin(ks),np.amax(ks))
+
+energy2f_tot_int = np.cbrt(energy2f_tot_int)
+energy2f_A_int = np.cbrt(energy2f_A_int)
+energy2f_A2_int = np.cbrt(energy2f_A2_int)
+energy2f_B_int = np.cbrt(energy2f_B_int)
+energy2f_C_int = np.cbrt(energy2f_C_int)
+energy2f_D_int = np.cbrt(energy2f_D_int)
+energy2f_E_int = np.cbrt(energy2f_E_int)
+energy2f_F_int = np.cbrt(energy2f_F_int)
+
+#plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$dv/dz$')
+plt.plot(ks, energy2f_A2_int, linewidth=2,label='$dv_y/dz$')
+plt.plot(ks, energy2f_B_int, linewidth=2,label='dust settling')
+plt.plot(ks, energy2f_C_int, linewidth=2,label='gas pressure')
+plt.plot(ks, energy2f_D_int, linewidth=2,label='dust-gas drift')
+plt.plot(ks, energy2f_E_int, linewidth=2,label='buoyancy')
+if viscosity_pert == True:
+    plt.plot(ks, energy2f_F_int, linewidth=2,label='viscosity')
+
+plt.plot(ks, energy2f_tot_int, linewidth=2,label=r'total',color='black',marker='o',linestyle='None',markevery=2)
+
+plt.plot([1e2,1e4], [0,0], linewidth=1,linestyle='dashed',color='black')
+
+lines1, labels1 = ax.get_legend_handles_labels()
+legend=ax.legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, fontsize=fontsize/2)
+
+plt.rc('font',size=fontsize,weight='bold')
+
+plt.xticks(fontsize=fontsize,weight='bold')
+plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
+
+plt.yticks(fontsize=fontsize,weight='bold')
+plt.ylabel(r'$\left(\int \rho_g U_i dz\right)^{1/3}$', fontsize=fontsize)
+
+title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+plt.title(title,weight='bold')
+
+fname = 'stratsi_plot_energy2f_int'
+plt.savefig(fname,dpi=150)
