@@ -433,8 +433,8 @@ for i, kx2f in enumerate(ks):
         dfy-= w*(d2vgy + dln_rhog(z)*dvgy)
         dfy*= alpha
 
-        dFz = (4.0/3.0)*d2ugz - kx2f*kx2f*ugz + (1.0/3.0)*1j*kx*dugx + dln_rhog(z)*((4.0/3.0)*dugz - (2.0/3.0)*1j*kx*ugx)
-        dFz*= alpha
+        dfz = (4.0/3.0)*d2ugz - kx2f*kx2f*ugz + (1.0/3.0)*1j*kx*dugx + dln_rhog(z)*((4.0/3.0)*dugz - (2.0/3.0)*1j*kx*ugx)
+        dfz*= alpha
     
         e2f_F=simps((np.real(dfx*np.conj(ugx) + 4.0*dfy*np.conj(ugy) + dfz*np.conj(ugz)))*rhog(z), z)
     else:
@@ -824,8 +824,8 @@ plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 
 plt.xlim(xmin,xmax)
 
-plt.plot(z, energy2f_A, linewidth=2,label='$U_1, dv/dz$')
-plt.plot(z, energy2f_A2, linewidth=2,label='$U_{1y}$, $dv_y/dz$', color='black',marker='x',linestyle='None',markevery=8)
+plt.plot(z, energy2f_A, linewidth=2,label='$U_1$, vert. shear')
+plt.plot(z, energy2f_A2, linewidth=2,label='$U_{1y}$, (vert. shear)$_y$', color='black',marker='x',linestyle='None',markevery=8)
 
 plt.plot(z, energy2f_B, linewidth=2,label='$U_2$, dust settling')
 plt.plot(z, energy2f_C, linewidth=2,label='$U_3$, gas pressure')
@@ -925,7 +925,7 @@ energy2f_E_int = np.cbrt(energy2f_E_int)
 energy2f_F_int = np.cbrt(energy2f_F_int)
 
 #plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$dv/dz$')
-plt.plot(ks, energy2f_A2_int, linewidth=2,label='$dv_y/dz$')
+plt.plot(ks, energy2f_A2_int, linewidth=2,label='(vert. shear)$_y$')
 plt.plot(ks, energy2f_B_int, linewidth=2,label='dust settling')
 plt.plot(ks, energy2f_C_int, linewidth=2,label='gas pressure')
 plt.plot(ks, energy2f_D_int, linewidth=2,label='dust-gas drift')
