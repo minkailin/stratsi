@@ -27,7 +27,7 @@ disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
 alpha    = 1e-6     #alpha viscosity value, assumed constant
-eta_hat  = 0.05     #dimensionless radial pressure gradient 
+eta_hat  = 0.1      #dimensionless radial pressure gradient 
 
 '''
 dust parameters
@@ -50,21 +50,21 @@ nz_vert = 1024
 mode parameters
 '''
 kx     = 400.0
-kx_min = 400
-kx_max = 1e4
-nkx    = 1
+kx_min = 1e2
+kx_max = 1e3
+nkx    = 100
 
 '''
 vertical resolution
 '''
-nz_waves = 160
+nz_waves = 128
 
 '''
 physics options 
 '''
 fix_metal     = True
-viscosity_eqm = False
-viscosity_pert= False
+viscosity_eqm = True
+viscosity_pert= True
 diffusion     = True
 backreaction  = True
 

@@ -40,9 +40,9 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400
-kx_max = 1e4
-nkx    = 1
+kx_min = 1e2
+kx_max = 1e3
+nkx    = 100
 
 '''
 physics options 
@@ -63,7 +63,7 @@ alpha0    = 1e-6
 st0       = 1e-2
 dg0       = 2.0
 metal     = 0.03#0.00135
-eta_hat   = 0.05
+eta_hat   = 0.1
 
 zmin      = 0
 zmax      = 0.05
