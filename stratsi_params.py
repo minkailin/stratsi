@@ -27,7 +27,7 @@ disk parameters
 '''
 rhog0    = 1.0      #midplane gas density, density normalization 
 alpha    = 1e-6     #alpha viscosity value, assumed constant
-eta_hat  = 0.1      #dimensionless radial pressure gradient 
+eta_hat  = 0.05      #dimensionless radial pressure gradient 
 
 '''
 dust parameters
@@ -50,21 +50,21 @@ nz_vert = 1024
 mode parameters
 '''
 kx     = 400.0
-kx_min = 1e2
-kx_max = 1e3
-nkx    = 100
+kx_min = 1e4
+kx_max = 1e4
+nkx    = 1
 
 '''
 vertical resolution
 '''
-nz_waves = 128
+nz_waves = 384
 
 '''
 physics options 
 '''
 fix_metal     = True
-viscosity_eqm = True
-viscosity_pert= True
+viscosity_eqm = False
+viscosity_pert= False
 diffusion     = True
 backreaction  = True
 
@@ -74,8 +74,8 @@ numerical options
 all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
-eigen_trial = 3.902597e-1-4.110389e-3*1j #0.336815 -1j*0.020939 #trial eigenvalue
-growth_filter = 2.0 #mode filter, only allow growth rates < growth_filter
+eigen_trial = 1.058138e0+2.378654e0*1j #trial eigenvalue. (need to flip sign of imag part from what's printed by code)
+growth_filter = 100.0 #mode filter, only allow growth rates < growth_filter
 tol = 1e-12
 
 '''

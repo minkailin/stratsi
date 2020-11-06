@@ -198,7 +198,7 @@ axs[0].set_ylabel(r'$s_\mathrm{max}/\Omega$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
 legend=axs[0].legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, handletextpad=-0.5,fontsize=fontsize/2)
 
-title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+title=r"Z={0:1.2f}, St={1:4.0e}, $\alpha$={2:4.0e}".format(metal, stokes, alpha)
 axs[0].set_title(title,weight='bold')
 
 for i, k in enumerate(ks[0]):
@@ -242,7 +242,7 @@ axs[0].set_ylabel(r'$\delta\rho_d/\rho_d$')
 lines1, labels1 = axs[0].get_legend_handles_labels()
 axs[0].legend(lines1, labels1, loc=(0.,-0.07), frameon=False, ncol=1, labelspacing=0.3, handletextpad=0.1)
 
-title=r"Z={0:1.2f}, St={1:4.0e}, $\delta$={2:4.0e}".format(metal, stokes, delta)
+title=r"Z={0:1.2f}, St={1:4.0e}, $\alpha$={2:4.0e}".format(metal, stokes, alpha)
 axs[0].set_title(title,weight='bold')
 
 axs[1].plot(z[0], W[0].real, linewidth=2, label=r'viscous, real', color='black')
@@ -258,7 +258,7 @@ axs[1].yaxis.set_major_formatter(FormatStrFormatter('%3.0e'))
 axs[2].plot(z[0], np.abs(Ugx[0]), linewidth=2, label=r'viscous, gas', color='black')
 axs[2].plot(z[0], np.abs(Udx[0]), linewidth=2, label=r'viscous, dust', color='m')
 axs[2].plot(z[1], np.abs(Ugx[1]), linewidth=2, label=r'inviscid, gas', color='red', linestyle='dashed')
-axs[2].plot(z[1], np.abs(Udx[1]), linewidth=2, label=r'inviscid, gas', color='c', linestyle='dashed')
+axs[2].plot(z[1], np.abs(Udx[1]), linewidth=2, label=r'inviscid, dust', color='c', linestyle='dashed')
 axs[2].set_ylabel(r'$|\delta v_{x}|$')
 
 lines1, labels1 = axs[2].get_legend_handles_labels()
@@ -267,7 +267,7 @@ axs[2].legend(lines1, labels1, loc='right', frameon=False, ncol=1, labelspacing=
 axs[3].plot(z[0], np.abs(Ugy[0]), linewidth=2, label=r'viscous, gas', color='black')
 axs[3].plot(z[0], np.abs(Udy[0]), linewidth=2, label=r'viscous, dust', color='m')
 axs[3].plot(z[1], np.abs(Ugy[1]), linewidth=2, label=r'inviscid, gas', color='red', linestyle='dashed')
-axs[3].plot(z[1], np.abs(Udy[1]), linewidth=2, label=r'inviscid, gas', color='c', linestyle='dashed')
+axs[3].plot(z[1], np.abs(Udy[1]), linewidth=2, label=r'inviscid, dust', color='c', linestyle='dashed')
 axs[3].set_ylabel(r'$|\delta v_{y}|$')
 
 ymax = np.amax(np.abs(Udy))
@@ -277,7 +277,7 @@ axs[3].annotate(r"s={0:4.2f}$\Omega$ (inviscid)".format(np.amax(freqs[1][m].real
 axs[4].plot(z[0], np.abs(Ugz[0]), linewidth=2, label=r'viscous, gas', color='black')
 axs[4].plot(z[0], np.abs(Udz[0]), linewidth=2, label=r'viscous, dust', color='m')
 axs[4].plot(z[1], np.abs(Ugz[1]), linewidth=2, label=r'inviscid, gas', color='red', linestyle='dashed')
-axs[4].plot(z[1], np.abs(Udz[1]), linewidth=2, label=r'inviscid, gas', color='c', linestyle='dashed')
+axs[4].plot(z[1], np.abs(Udz[1]), linewidth=2, label=r'inviscid, dust', color='c', linestyle='dashed')
 axs[4].set_ylabel(r'$|\delta v_{z}|$')
 
 axs[4].set_xlabel(r'$z/H_g$',fontweight='bold')

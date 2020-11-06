@@ -90,7 +90,7 @@ else:
 
 sgrow_1f = growth_1f[g1]
 ofreq_1f = freq_1f[g1]
-print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
+print("one-fluid model: kx, growth, freq = {0:1.6e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
 
 W1f         = np.array(eig_W1f[n][g1])
 Q1f         = np.array(eig_Q1f[n][g1])
@@ -261,7 +261,7 @@ else:
 
 sgrow = growth[g1]
 ofreq = freq[g1]
-print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
+print("two-fluid model: kx, growth, freq = {0:1.6e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
     
 W         =  np.array(eig_W[m][g1])
 Q         =  np.array(eig_Q[m][g1])
@@ -938,7 +938,7 @@ plt.plot(ks, energy2f_tot_int, linewidth=2,label=r'total',color='black',marker='
 plt.plot([1e2,1e4], [0,0], linewidth=1,linestyle='dashed',color='black')
 
 lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper left', frameon=False, ncol=1, fontsize=fontsize/2)
+legend=ax.legend(lines1, labels1, loc='upper left', frameon=False, ncol=2, fontsize=fontsize/2)
 
 plt.rc('font',size=fontsize,weight='bold')
 
