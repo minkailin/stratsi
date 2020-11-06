@@ -90,7 +90,7 @@ else:
 
 sgrow_1f = growth_1f[g1]
 ofreq_1f = freq_1f[g1]
-print("one-fluid model: kx, growth, freq = {0:1.6e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
+print("one-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx_1f, sgrow_1f, ofreq_1f))
 
 W1f         = np.array(eig_W1f[n][g1])
 Q1f         = np.array(eig_Q1f[n][g1])
@@ -261,7 +261,7 @@ else:
 
 sgrow = growth[g1]
 ofreq = freq[g1]
-print("two-fluid model: kx, growth, freq = {0:1.6e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
+print("two-fluid model: kx, growth, freq = {0:1.2e} {1:13.6e} {2:13.6e}".format(kx, sgrow, ofreq))
     
 W         =  np.array(eig_W[m][g1])
 Q         =  np.array(eig_Q[m][g1])
@@ -823,30 +823,30 @@ ax = fig.add_subplot()
 plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
 
 plt.xlim(xmin,xmax)
-sc=1e5
-plt.plot(z, energy2f_A*sc, linewidth=2,label='$U_1$, vert. shear')
-plt.plot(z, energy2f_A2*sc, linewidth=2,label='$U_{1y}$, (vert. shear)$_y$', color='black',marker='x',linestyle='None',markevery=8)
 
-plt.plot(z, energy2f_B*sc, linewidth=2,label='$U_2$, dust settling')
-plt.plot(z, energy2f_C*sc, linewidth=2,label='$U_3$, gas pressure')
-plt.plot(z, energy2f_D*sc, linewidth=2,label='$U_4$, dust-gas drift')
-plt.plot(z, energy2f_E*sc, linewidth=2,label='$U_5$, buoyancy')
+plt.plot(z, energy2f_A, linewidth=2,label='$U_1$, vert. shear')
+plt.plot(z, energy2f_A2, linewidth=2,label='$U_{1y}$, (vert. shear)$_y$', color='black',marker='x',linestyle='None',markevery=8)
+
+plt.plot(z, energy2f_B, linewidth=2,label='$U_2$, dust settling')
+plt.plot(z, energy2f_C, linewidth=2,label='$U_3$, gas pressure')
+plt.plot(z, energy2f_D, linewidth=2,label='$U_4$, dust-gas drift')
+plt.plot(z, energy2f_E, linewidth=2,label='$U_5$, buoyancy')
 if viscosity_pert == True:
-    plt.plot(z, energy2f_F*sc, linewidth=2,label='$U_6$, viscosity')
+    plt.plot(z, energy2f_F, linewidth=2,label='$U_6$, viscosity')
     
-plt.plot(z, sc*(energy2f_A + energy2f_B + energy2f_C + energy2f_D + energy2f_E + energy2f_F), linewidth=2,label=r'$\sum U_i$',linestyle='dashed')
-plt.plot(z, energy2f_tot*sc, linewidth=2,label=r'$U_{tot}$',color='black',marker='o',linestyle='None',markevery=16)
+plt.plot(z, energy2f_A + energy2f_B + energy2f_C + energy2f_D + energy2f_E + energy2f_F, linewidth=2,label=r'$\sum U_i$',linestyle='dashed')
+plt.plot(z, energy2f_tot, linewidth=2,label=r'$U_{tot}$',color='black',marker='o',linestyle='None',markevery=8)
 
 plt.rc('font',size=fontsize,weight='bold')
 
 lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2, labelspacing=0.35)
+legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2, labelspacing=0.4)
 
 plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$z/H_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$pseudo$-$energy\times10^{5}$', fontsize=fontsize,labelpad=20)
+plt.ylabel(r'$pseudo$-$energy$', fontsize=fontsize)
 
 title=r"$k_xH_g$={0:3.0f}".format(kx)+r", s={0:4.2f}$\Omega$".format(sgrow)
 plt.title(title,weight='bold')
@@ -910,22 +910,19 @@ plot energy decomposition as a function of kx (2 fluid)
 
 fig = plt.figure(figsize=(8,4.5))
 ax = fig.add_subplot()
-#plt.subplots_adjust(left=0.185, right=0.95, top=0.9, bottom=0.2)
-plt.subplots_adjust(left=0.19, right=0.955, top=0.9, bottom=0.2)
+plt.subplots_adjust(left=0.185, right=0.95, top=0.9, bottom=0.2)
 plt.xscale('log')
 
 plt.xlim(np.amin(ks),np.amax(ks))
 
-scale=100
-
-energy2f_tot_int = np.cbrt(energy2f_tot_int)*scale
-energy2f_A_int = np.cbrt(energy2f_A_int)*scale
-energy2f_A2_int = np.cbrt(energy2f_A2_int)*scale
-energy2f_B_int = np.cbrt(energy2f_B_int)*scale
-energy2f_C_int = np.cbrt(energy2f_C_int)*scale
-energy2f_D_int = np.cbrt(energy2f_D_int)*scale
-energy2f_E_int = np.cbrt(energy2f_E_int)*scale
-energy2f_F_int = np.cbrt(energy2f_F_int)*scale
+energy2f_tot_int = np.cbrt(energy2f_tot_int)
+energy2f_A_int = np.cbrt(energy2f_A_int)
+energy2f_A2_int = np.cbrt(energy2f_A2_int)
+energy2f_B_int = np.cbrt(energy2f_B_int)
+energy2f_C_int = np.cbrt(energy2f_C_int)
+energy2f_D_int = np.cbrt(energy2f_D_int)
+energy2f_E_int = np.cbrt(energy2f_E_int)
+energy2f_F_int = np.cbrt(energy2f_F_int)
 
 #plt.plot(ks_1f, energy1f_A_int, linewidth=2,label='$dv/dz$')
 plt.plot(ks, energy2f_A2_int, linewidth=2,label='(vert. shear)$_y$')
@@ -953,7 +950,7 @@ plt.xticks(fontsize=fontsize,weight='bold')
 plt.xlabel(r'$k_xH_g$',fontsize=fontsize)
 
 plt.yticks(fontsize=fontsize,weight='bold')
-plt.ylabel(r'$10^2\left(\int \rho_g U_i dz\right)^{1/3}$', fontsize=fontsize)
+plt.ylabel(r'$\left(\int \rho_g U_i dz\right)^{1/3}$', fontsize=fontsize)
 
 title=r"Z={0:1.2f}, St={1:4.0e}, $\alpha$={2:4.0e}".format(metal, stokes, alpha)
 plt.title(title,weight='bold')
