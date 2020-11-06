@@ -14,23 +14,32 @@ parser.add_argument("--mode", nargs='*', help="select mode number")
 #case parameters
 metal = 0.03
 stokes= np.array([0.001, 0.1])
+#stokes= np.array([0.1, 0.1])
 delta = 1e-6
 
 stokes_string= ['0.001','0.1']
+#stokes_string= ['0.1','0.1']
 Hd           = np.sqrt(delta/(stokes + delta)) 
 
-ncut = np.array([11,7])
+ncut_1fluid = np.array([11,21])
+ncut_2fluid = np.array([11,22])
+
+#ncut_1fluid = np.array([21,22])
+#ncut_2fluid = np.array([22,21])
 
 '''
 one-fluid results
 '''
 
-filenames_1f = ['stratsi_1fluid_modes_stokes'+x+'.h5' for x in stokes_string]
+#filenames_1f = ['stratsi_1fluid_modes_stokes'+x+'.h5' for x in stokes_string]
+filenames_1f = ['stratsi_1fluid_modes_stokes_no_osc_filter'+x+'.h5' for x in stokes_string]
+#filenames_1f = ['stratsi_1fluid_modes_stokes_no_osc_filter0.1.h5','stratsi_1fluid_modes_stokes0.1_zmax7.h5']
 
 kx_values_1f    = []
 growth_rates_1f = []
 real_freq_1f    = []
 delrhod_1f      = []
+zaxis_1f        = []
 
 for n, fname in enumerate(filenames_1f):
 
@@ -39,6 +48,7 @@ for n, fname in enumerate(filenames_1f):
     kx = infile['scales']['kx_space'][:]
     kx_values_1f.append(kx)
     z_1f     = infile['scales']['z'][:]/Hd[n] #vertical axis in units of dust scale height
+    zaxis_1f.append(z_1f)
     
     freqs = []
     W     = []
@@ -65,7 +75,7 @@ for n, fname in enumerate(filenames_1f):
     growth_rates_1f[n].append(growth[g1])
     real_freq_1f[n].append(freq[g1])
 
-    if (i<ncut[n]):
+    if (i<ncut_1fluid[n]):
       Wmode = np.array(W[i][g1])
       Qmode = np.array(Q[i][g1])
       drhod = Wmode + Qmode
@@ -81,13 +91,15 @@ for n, fname in enumerate(filenames_1f):
 two-fluid results
 '''
 
-filenames_2f = ['stratsi_modes_stokes'+x+'.h5' for x in stokes_string]
-    
+#filenames_2f = ['stratsi_modes_stokes'+x+'.h5' for x in stokes_string]
+filenames_2f = ['stratsi_modes_stokes_no_osc_filter'+x+'.h5' for x in stokes_string] 
+#filenames_2f= ['stratsi_modes_stokes_no_osc_filter0.1.h5','stratsi_modes_stokes0.1_zmax7.h5'] 
+  
 kx_values_2f    = []
 growth_rates_2f = []
 real_freq_2f    = []
 delrhod_2f      = []
-
+zaxis_2f        = []
 for n, fname in enumerate(filenames_2f):
 
   with h5py.File(fname,'r') as infile:
@@ -95,7 +107,8 @@ for n, fname in enumerate(filenames_2f):
     kx = infile['scales']['kx_space'][:]
     kx_values_2f.append(kx)
     z_2f     = infile['scales']['z'][:]/Hd[n]
-    
+    zaxis_2f.append(z_2f)    
+
     freqs = []
     W     = []
     Q     = []
@@ -121,7 +134,7 @@ for n, fname in enumerate(filenames_2f):
     growth_rates_2f[n].append(growth[g1])
     real_freq_2f[n].append(freq[g1])
 
-    if(i<ncut[n]):
+    if(i<ncut_2fluid[n]):
       Wmode = np.array(W[i][g1])
       Qmode = np.array(Q[i][g1])
       drhod = Wmode + Qmode
@@ -153,21 +166,36 @@ plt.xscale('log')
 colors=['red','black','blue']
 linestyles=['solid','dashed','dashed']
 stokes_label = [r'$St=$'+x for x in stokes_string]
+zmax_string = [r'5$H_d$',r'7$H_d$']
+lab1 =[r'one-fluid, zmax='+ x for x in zmax_string]
+lab2 =[r'two-fluid, zmax='+ x for x in zmax_string]
 
 for i in range(0,2):
-    if i == 0:
-        lab1 = r'one-fluid'
-        lab2 = r'two-fluid'
-    else:
-        lab1 = lab2 = ''
-    axs[0].plot(kx_values_1f[i][0:ncut[i]], growth_rates_1f[i][0:ncut[i]], marker='o', linestyle='none', markersize=8, label=lab1,color='black')
-    axs[0].plot(kx_values_2f[i][0:ncut[i]], growth_rates_2f[i][0:ncut[i]], marker='X', linestyle='none', markersize=8, label=lab2,color='red')
-    axs[0].plot(kx_values_2f[i][0:ncut[i]], growth_rates_2f[i][0:ncut[i]], linestyle=linestyles[i],color='red')
+#    if i == 0:
+#        lab1 = r'one-fluid'
+#        lab2 = r'two-fluid'
+#    else:
+#        lab1 = lab2 = ''
+    
+    axs[0].plot(kx_values_1f[i][0:ncut_1fluid[i]], growth_rates_1f[i][0:ncut_1fluid[i]], marker='o', linestyle='none', markersize=8, label=lab1,color='black')
+    axs[0].plot(kx_values_2f[i][0:ncut_2fluid[i]], growth_rates_2f[i][0:ncut_2fluid[i]], marker='X', linestyle='none', markersize=8, label=lab2,color='red')
+    axs[0].plot(kx_values_2f[i][0:ncut_2fluid[i]], growth_rates_2f[i][0:ncut_2fluid[i]], linestyle=linestyles[i],color='red')
 
-    axs[1].plot(kx_values_1f[i][0:ncut[i]], real_freq_1f[i][0:ncut[i]], marker='o', linestyle='none', markersize=8,color='black')
-    axs[1].plot(kx_values_2f[i][0:ncut[i]], real_freq_2f[i][0:ncut[i]], marker='X', linestyle='none', markersize=8,color='red')
-    axs[1].plot(kx_values_2f[i][0:ncut[i]], real_freq_2f[i][0:ncut[i]],color='red',linestyle=linestyles[i],label=stokes_label[i])
+    axs[1].plot(kx_values_1f[i][0:ncut_1fluid[i]], real_freq_1f[i][0:ncut_1fluid[i]], marker='o', linestyle='none', markersize=8,color='black')
+    axs[1].plot(kx_values_2f[i][0:ncut_2fluid[i]], real_freq_2f[i][0:ncut_2fluid[i]], marker='X', linestyle='none', markersize=8,color='red')
+    axs[1].plot(kx_values_2f[i][0:ncut_2fluid[i]], real_freq_2f[i][0:ncut_2fluid[i]],color='red',linestyle=linestyles[i],label=stokes_label[i])
+    
+    '''
+    symbol = ['o','X']
+    size   = [10,8]
+    col1f    = ['black','red']
+    col2f    = ['green', 'blue']
+    axs[0].plot(kx_values_1f[i][0:ncut_1fluid[i]], growth_rates_1f[i][0:ncut_1fluid[i]], marker=symbol[i], linestyle='none', markersize=size[i], label=lab1[i],color=col1f[i])
+    axs[0].plot(kx_values_2f[i][0:ncut_2fluid[i]], growth_rates_2f[i][0:ncut_2fluid[i]], marker=symbol[i], linestyle='none', markersize=size[i], label=lab2[i],color=col2f[i])
 
+    axs[1].plot(kx_values_1f[i][0:ncut_1fluid[i]], real_freq_1f[i][0:ncut_1fluid[i]], marker=symbol[i], linestyle='none', markersize=size[i],color=col1f[i],label=lab1[i])
+    axs[1].plot(kx_values_2f[i][0:ncut_2fluid[i]], real_freq_2f[i][0:ncut_2fluid[i]], marker=symbol[i], linestyle='none', markersize=size[i],color=col2f[i],label=lab2[i])
+    ''' 
 
 axs[0].set_ylabel(r'$s_\mathrm{max}/\Omega$')
 
@@ -181,7 +209,7 @@ axs[1].set_ylabel(r'$\omega/\Omega$')
 axs[1].set_xlabel(r'$k_xH_g$')
 
 lines1, labels1 = axs[1].get_legend_handles_labels()
-legend=axs[1].legend(lines1, labels1, loc='lower left', frameon=False, ncol=1,handletextpad=0.2, fontsize=fontsize/1.5)
+legend=axs[1].legend(lines1, labels1, loc='lower left', frameon=False, ncol=1,handletextpad=0.2, fontsize=fontsize/2)
 
 fname = 'stratsi_compare_stokes'
 plt.savefig(fname,dpi=150)
@@ -221,14 +249,18 @@ for i in range(0,2):
     
     axs[i].set_ylabel(r'$\delta\rho_d/\rho_d$')
     '''
-
-    axs[i].plot(z_1f, np.abs(delrhod_1f[i][m[i]]), linewidth=2, label=label[0], color='black')
-    axs[i].plot(z_2f, np.abs(delrhod_2f[i][m[i]]), linewidth=2, label=label[1], color='red', linestyle='dashed')
+    
+    axs[i].plot(zaxis_1f[i], np.abs(delrhod_1f[i][m[i]]), linewidth=2, label=label[0], color='black')
+    axs[i].plot(zaxis_2f[i], np.abs(delrhod_2f[i][m[i]]), linewidth=2, label=label[1], color='red', linestyle='dashed')
   
     axs[i].set_ylabel(r'|$\delta\rho_d/\rho_d$|')
-
+         
 
     axs[i].annotate(r"$St$={0:5.3f}".format(stokes[i]) +"\n"+r"$k_xH_g$={0:3.0f}".format(kx_values_2f[i][m[i]])+"\n"+r"s={0:4.2f}$\Omega$".format(growth_rates_2f[i][m[i]]), xy=pos)
+    '''
+    zm = [5,7]
+    axs[i].annotate(r"$zmax$={0:1.0f}$H_d$".format(zm[i]) +"\n"+r"$k_xH_g$={0:3.0f}".format(kx_values_2f[i][m[i]]), xy=pos)
+    '''
     #axs[i].annotate(r"$St$={0:5.3f}".format(stokes[i]) +"\n"+r"s={0:4.2f}$\Omega$".format(growth_rates_2f[i][m[i]]), xy=(0.1, 0.3))
 
     if i == 0:
