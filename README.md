@@ -1,3 +1,3 @@
-#Stratified and vertically-shearing streaming instabilities (Lin 2020/2021)
+# Stratified and vertically-shearing streaming instabilities (Lin 2020/2021)
 
-##Base codes
+## Base codes
