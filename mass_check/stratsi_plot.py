@@ -2,7 +2,6 @@ import sys
 import numpy as np
 from mpi4py import MPI
 import matplotlib.pyplot as plt
-from dedalus import public as de
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
                                AutoMinorLocator)
 import h5py
@@ -17,7 +16,7 @@ from scipy.integrate import simps
 #    }
 
 
-from stratsi_params import alpha, delta, stokes, metal, epsilon, vdz, dvdz, rhog, dln_rhog, viscosity_pert, dln_rhod, depsilon, d2epsilon, dln_epsilon
+from stratsi_params import alpha, delta, stokes, metal, epsilon, vdz, dvdz, rhog, dln_rhog, viscosity_pert
 from stratsi_1fluid import epsilon_eqm, dvx_eqm, dvy_eqm, vz_eqm, dvz_eqm, eta_hat, P_eqm#, z_maxvshear, maxvshear
 
 '''
@@ -230,7 +229,6 @@ with h5py.File('stratsi_modes.h5','r') as infile:
   eig_Udx= []
   eig_Udy= []
   eig_Udz= []
-  eig_dUgz= []
   
   for k_i in infile['tasks']:
     freqs.append(infile['tasks'][k_i]['freq'][:])
@@ -242,7 +240,7 @@ with h5py.File('stratsi_modes.h5','r') as infile:
     eig_Udx.append(infile['tasks'][k_i]['eig_Udx'][:])
     eig_Udy.append(infile['tasks'][k_i]['eig_Udy'][:])
     eig_Udz.append(infile['tasks'][k_i]['eig_Udz'][:])
-    eig_dUgz.append(infile['tasks'][k_i]['eig_dUgz'][:])
+
 
 if(args.mode):
     m = plot_mode
@@ -273,7 +271,6 @@ Ugz          =  np.array(eig_Ugz[m][g1])
 Udx          =  np.array(eig_Udx[m][g1])
 Udy          =  np.array(eig_Udy[m][g1])
 Udz          =  np.array(eig_Udz[m][g1])
-dUgz         =  np.array(eig_dUgz[m][g1])
 
 g2      = np.argmax(np.abs(W+Q))
 norm    = W[g2] + Q[g2]
@@ -286,7 +283,6 @@ Ugz /= norm
 Udx /= norm
 Udy /= norm
 Udz /= norm
-dUgz/= norm
 
 del_rhod = W + Q
 
@@ -318,9 +314,7 @@ dW   = np.gradient(W, z)
 
 dUgx = np.gradient(Ugx, z)
 dUgy = np.gradient(Ugy, z)
-dUgz_num = np.gradient(Ugz, z)
-
-#dUgz = dUgz_num
+dUgz = np.gradient(Ugz, z)
 
 d2Ugx = np.gradient(dUgx, z)
 d2Ugy = np.gradient(dUgy, z)
@@ -368,33 +362,6 @@ energy2f_C  /= sgrow#*(1.0 + eps2f)
 energy2f_D  /= sgrow#*(1.0 + eps2f)
 energy2f_E   /= sgrow#*(1.0 + eps2f)
 energy2f_F   /= sgrow#*(1.0 + eps2f)
-
-
-#sanity check: compare RHS and LHS of mass equations
-
-ddel_rhod = np.gradient(del_rhod, z)
-
-sig = sgrow - 1j*ofreq
-
-dust_mass_rhs = sig*del_rhod + 1j*kx*(vdx*del_rhod + Udx) + dln_rhod(z)*(vdz(z)*del_rhod + Udz)
-dust_mass_rhs+= vdz(z)*ddel_rhod + dvdz(z)*del_rhod + dUdz
-
-dQ   =  np.gradient(Q, z)
-d2Q  =  np.gradient(dQ, z)
-deps =  dQ*epsilon(z) + depsilon(z)*Q
-d2eps = d2Q*epsilon(z) + 2.0*depsilon(z)*dQ + d2epsilon(z)*Q
-
-#dust_mass_lhs = -delta*kx*kx*Q
-#dust_mass_lhs+= (delta/epsilon(z))*(dln_rhog(z)*(depsilon(z)*W + deps) + d2epsilon(z)*W + depsilon(z)*dW + d2eps)
-
-dust_mass_lhs = delta*(dln_epsilon(z)*(dln_rhog(z)*W + dW) + d2epsilon(z)*W/epsilon(z) - kx*kx*Q + dln_rhog(z)*deps/epsilon(z) + d2eps/epsilon(z))
-
-#gas_mass_lhs = sig*W 
-#gas_mass_rhs =-(1j*kx*(vgx*W + Ugx) + dln_rhog(z)*Ugz + dUgz)
-#gas_mass = 1j*kx*Ugx + dUgz
-
-gas_mass = sig*W + 1j*kx*(vgx*W + Ugx) + dln_rhog(z)*Ugz + dUgz
-
 
 '''
 compare integrated energetics for the most unstable mode (at each kx) based on 2 fluid result
@@ -717,10 +684,9 @@ ymax = np.amax(np.abs(Uy))
 #plt.rcParams.update(custom_preamble)
 axs[3].annotate(r"$k_xH_g$={0:3.0f}".format(kx)+"\n"+r"s={0:4.2f}$\Omega$".format(sgrow), xy=(0.75*xmax, 0.5*ymax))
 
-
 axs[4].plot(z_1f, np.abs(Uz), linewidth=2, label=r'one-fluid', color='black')
-axs[4].plot(z, np.abs(Udz), linewidth=2, label=r'gas', color='red', linestyle='dashed')
-axs[4].plot(z, np.abs(Ugz), linewidth=2, label=r'dust', color='lime', linestyle='dotted')
+axs[4].plot(z, np.abs(Udz), linewidth=2, label=r'dust', color='red', linestyle='dashed')
+axs[4].plot(z, np.abs(Ugz), linewidth=2, label=r'gas', color='lime', linestyle='dotted')
 axs[4].set_ylabel(r'$|\delta v_{z}|$')
 #lines1, labels1 = axs[4].get_legend_handles_labels()
 #axs[4].legend(lines1, labels1, loc='right', frameon=False, ncol=1)
@@ -887,53 +853,6 @@ plt.title(title,weight='bold')
 
 fname = 'stratsi_plot_energy2f'
 plt.savefig(fname,dpi=150)
-
-'''
-dust continuity equation sanity checck
-'''
-
-fig = plt.figure(figsize=(8,4.5))
-ax = fig.add_subplot()
-plt.subplots_adjust(left=0.2, right=0.95, top=0.9, bottom=0.2)
-
-plt.xlim(xmin,xmax)
-
-#plt.plot(z, dust_mass_lhs.real, linewidth=2,label='lhs, real')
-#plt.plot(z, dust_mass_rhs.real, linewidth=2,label='rhs, real',linestyle='dashed')
-
-#plt.plot(z, dust_mass_lhs.imag, linewidth=2,label='lhs, imag')
-#plt.plot(z, dust_mass_rhs.imag, linewidth=2,label='rhs, imag',linestyle='dashed')
-
-plt.plot(z, gas_mass.real, linewidth=2,label='gas, real')
-plt.plot(z, gas_mass.imag, linewidth=2,label='gas, imag',linestyle='dashed')
-
-#plt.plot(z, dUgz.real, linewidth=2,label='dUgz, real')
-#plt.plot(z, dUgz_num.real, linewidth=2,label='dUgz_num, real',linestyle='dashed')
-
-#plt.plot(z, dUgz.imag, linewidth=2,label='dUgz, imag')
-#plt.plot(z, dUgz_num.imag, linewidth=2,label='dUgz_num, imag',linestyle='dashed')
-
-plt.rc('font',size=fontsize,weight='bold')
-
-lines1, labels1 = ax.get_legend_handles_labels()
-legend=ax.legend(lines1, labels1, loc='upper right', frameon=False, ncol=1, fontsize=fontsize/2, labelspacing=0.4)
-
-plt.xticks(fontsize=fontsize,weight='bold')
-plt.xlabel(r'$z/H_g$',fontsize=fontsize)
-
-
-fname = 'stratsi_plot_dust_mass'
-plt.savefig(fname,dpi=150)
-
-
-
-
-
-
-
-
-
-
 
 '''
 plot energy decomposition as a function of kx (1 fluid)
