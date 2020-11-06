@@ -35,4 +35,10 @@ Main plotting tool. Compares one- and two-fluid results.
 
 ## Special plotting
 * `stratsi_plot_visc.py`  
-Compares viscous results to inviscid results. Require inviscid results under folder "novisc". 
+Compares viscous results to inviscid results. Require inviscid results under folder "novisc".
+* compare_etas/`stratsi_compare_eta.py`  
+Compare results from two different eta values.
+* compare_stokes/`stratsi_compare_stokes.py`  
+Compare results from two different stokes numbers.
+* compare_Z/`stratsi_compare_Z.py`  
+Compare results from two different metallicities. 
