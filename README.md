@@ -1,7 +1,5 @@
 # **Stratified and vertically-shearing streaming instabilities**
 
-## Summary
-
 ## Paper
 Lin (2021)
 
@@ -76,8 +74,28 @@ _Outputs_
 `eqm_horiz.h5`: equilibrium horizontal velocity profiles   
 `stratsi_eqm.png`: plot of equilibrium disk structure   
 `stratsi_eqm_drift.png`: plot of dust-gas relative drift  
-`stratsi_eqm_cen.png`: plot of dust-gas center-of-mass horizontal velocities
+`stratsi_eqm_cen.png`: plot of dust-gas center-of-mass horizontal velocities  
 `stratsi_eqm_epsilon`: single plot of equilibrium dust-to-gas ratio  
+
+## Generic plotting
+
+_Code_  
+`stratsi_plot.py`: main plotting tool. Compares one- and two-fluid results.
+
+_Usage examples_  
+`python3.7 stratsi_plot.py --mode 8`: plot the 8th mode in Kx space    
+`python3.7 stratsi_plot.py --mode 8 --sig 0.5 1` plot the 8th mode in Kx space with growth rate and frequency closest to 0.5 and 1, respectively  
+`python3.7 stratsi_plot.py --kx 200`: plot the mode closest to Kx=200    
+
+_Outputs_  
+`stratsi_plot_growth.png`: growth rates and frequencies as a function of Kx      
+`stratsi_plot_growth_max.png`: max. growth rate and frequency as function of Kx  
+`stratsi_plot_eigen.png`: all growth rates and frequencies for a single Kx  
+`stratsi_plot_eigenfunc.png`: eigenfunctions  
+`stratsi_plot_eigenf2D.png`: flow visualization in meridional plane (using two-fluid results)  
+`stratsi_plot_energy1f`: pseudo-energy decomposition for a single Kx, as a function of z, based one-fluid results
+`stratsi_plot_energy1f_int`: vertically-integrated pseudo-energies as a function of Kx
+`stratsi_plot_energy2f`, `stratsi_plot_energy2f_int`: as above but using two-fluid results  
 
 ## Utilities
 * `run_problem.sh`  
@@ -88,10 +106,6 @@ Copied from the EIGENTOOLS package.
 For computing the largest vertical shear rate in the disk and its location.
 * `stratsi_plot_eqm.py`  
 For checking the two-fluid equilibrium horizontal velocity profiles by comparing the right-hand-side and left-hand-sides of the equilibrium equations.
-
-## Generic plotting
-*  `stratsi_plot.py`
-Main plotting tool. Compares one- and two-fluid results.
 
 ## Special plotting
 * `stratsi_plot_visc.py`  
