@@ -92,9 +92,9 @@ _Outputs_
 `stratsi_plot_growth_max.png`: max. growth rate and frequency as function of Kx  
 `stratsi_plot_eigen.png`: all growth rates and frequencies for a single Kx  
 `stratsi_plot_eigenfunc.png`: eigenfunctions  
-`stratsi_plot_eigenf2D.png`: flow visualization in meridional plane (using two-fluid results)  
-`stratsi_plot_energy1f`: pseudo-energy decomposition for a single Kx, as a function of z, based one-fluid results
-`stratsi_plot_energy1f_int`: vertically-integrated pseudo-energies as a function of Kx
+`stratsi_plot_eigenf2D.png`: flow visualization in meridional plane (using two-fluid results)    
+`stratsi_plot_energy1f`: pseudo-energy decomposition for a single Kx, as a function of z, based one-fluid results  
+`stratsi_plot_energy1f_int`: vertically-integrated pseudo-energies as a function of Kx  
 `stratsi_plot_energy2f`, `stratsi_plot_energy2f_int`: as above but using two-fluid results  
 
 ## Utilities
