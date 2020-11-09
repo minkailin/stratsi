@@ -5,7 +5,7 @@ Lin (2021)
 
 ## Requirements
 * [`DEDALUS`](https://dedalus-project.org/)
-* [`EIGENTOOLS`](https://github.com/DedalusProject/eigentools)
+* [`EIGENTOOLS`](https://github.com/DedalusProject/eigentools) (a slighty modified version is included below)
 
 ## One-fluid model
 
@@ -84,7 +84,7 @@ _Code_
 
 _Usage examples_  
 `python3.7 stratsi_plot.py --mode 8`: plot the 8th mode in Kx space    
-`python3.7 stratsi_plot.py --mode 8 --sig 0.5 1` plot the 8th mode in Kx space with growth rate and frequency closest to 0.5 and 1, respectively  
+`python3.7 stratsi_plot.py --mode 8 --sig 0.5 1` plot the 8th mode in Kx space with growth rate and frequency closest to s=0.5 and omega=1, respectively  
 `python3.7 stratsi_plot.py --kx 200`: plot the mode closest to Kx=200    
 
 _Outputs_  
@@ -94,14 +94,14 @@ _Outputs_
 `stratsi_plot_eigenfunc.png`: eigenfunctions  
 `stratsi_plot_eigenf2D.png`: flow visualization in meridional plane (using two-fluid results)    
 `stratsi_plot_energy1f`: pseudo-energy decomposition for a single Kx, as a function of z, based one-fluid results  
-`stratsi_plot_energy1f_int`: vertically-integrated pseudo-energies as a function of Kx  
+`stratsi_plot_energy1f_int`: vertically-integrated pseudo-energies as a function of Kx    
 `stratsi_plot_energy2f`, `stratsi_plot_energy2f_int`: as above but using two-fluid results  
 
 ## Utilities
 * `run_problem.sh`  
 For running the complete two-fluid problem (computing equilibrium then solving the linearized equations).
 * `eigenproblem.py`  
-Copied from the EIGENTOOLS package.
+Copied from the [`EIGENTOOLS`](https://github.com/DedalusProject/eigentools) package, tweaked to allow variable tolerance (`tol`,`tol_eigen`)
 * `stratsi_maxvshear.py`  
 For computing the largest vertical shear rate in the disk and its location.
 * `stratsi_plot_eqm.py`  
