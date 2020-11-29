@@ -1,7 +1,7 @@
 # **Stratified and vertically-shearing streaming instabilities**
 
 ## Paper
-* [`Lin (2020)`](https://github.com/minkailin/stratsi)
+* [`Lin (2020)`](https://ui.adsabs.harvard.edu/abs/2020arXiv201112300L/abstract)
 
 ## Requirements
 * [`DEDALUS`](https://dedalus-project.org/)
