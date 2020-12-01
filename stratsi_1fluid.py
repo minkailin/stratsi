@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 1e4
+kx_min = 100
 kx_max = 1e4
 nkx    = 1
 
@@ -67,7 +67,7 @@ eta_hat   = 0.05
 
 zmin      = 0
 zmax      = 0.05
-nz_waves  = 384
+nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
 
@@ -84,7 +84,7 @@ all_solve_dense   = True #solve for all eigenvals for all kx
 first_solve_dense = True #use the dense solver for very first eigen calc
 Neig = 10 #number of eigenvalues to get for sparse solver
 eigen_trial = 1.058138+2.385406*1j #trial eigenvalue in units of Omega. (need to flip sign of imag part from what's printed by code)
-growth_filter = 100.0*Omega #mode filter, only allow growth rates < growth_filter
+growth_filter = 10*Omega #mode filter, only allow growth rates < growth_filter
 tol = 1e-12
 
 '''
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     '''
 
     if (diffusion == True) and (tstop == True): #full problem
-        waves = de.EVP(domain_EVP, ['W','W_p','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)
+        waves = de.EVP(domain_EVP, ['W','W_p','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)#,ncc_cutoff=1e-12,entry_cutoff=0)
     if (diffusion == False) and (tstop == True):
         waves = de.EVP(domain_EVP, ['W','W_p','Q','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)
     if (diffusion == False) and (tstop == False): 
@@ -459,7 +459,7 @@ if __name__ == '__main__':
 
         waves.add_bc('right(dW) = 0')
         waves.add_bc('right(Q)  = 0')
-
+        
         #waves.add_bc('right(W) = 0')
         #waves.add_bc('right(dQ)  = 0')
 
@@ -471,7 +471,7 @@ if __name__ == '__main__':
         waves.add_bc('left(Uz)=0')
 
         waves.add_bc('right(dW) = 0')    
-
+        
     if (diffusion == False) and (tstop == False): #no diffusion, perfect coupling, 2 odes (standard problem)
         waves.add_bc('left(Uz)=0')
         waves.add_bc('right(Uz) = 0')
