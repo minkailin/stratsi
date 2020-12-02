@@ -23,7 +23,7 @@ matplotlib_logger.setLevel(logging.WARNING)
 comm = MPI.COMM_WORLD
 
 logger.info("stratified streaming instability")
-from eigenproblem import Eigenproblem #added by MKL
+from eigentools import Eigenproblem
 import h5py
 
 '''
@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 100
+kx_min = 400
 kx_max = 1e4
 nkx    = 1
 
@@ -86,6 +86,8 @@ Neig = 10 #number of eigenvalues to get for sparse solver
 eigen_trial = 1.058138+2.385406*1j #trial eigenvalue in units of Omega. (need to flip sign of imag part from what's printed by code)
 growth_filter = 10*Omega #mode filter, only allow growth rates < growth_filter
 tol = 1e-12
+ncc_cut = 1e-10
+entry_cut = 0.0
 
 '''
 output control
@@ -258,11 +260,11 @@ if __name__ == '__main__':
     '''
 
     if (diffusion == True) and (tstop == True): #full problem
-        waves = de.EVP(domain_EVP, ['W','W_p','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)#,ncc_cutoff=1e-12,entry_cutoff=0)
+        waves = de.EVP(domain_EVP, ['W','W_p','Q','Q_p','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol,ncc_cutoff=ncc_cut,entry_cutoff=entry_cut)
     if (diffusion == False) and (tstop == True):
-        waves = de.EVP(domain_EVP, ['W','W_p','Q','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)
+        waves = de.EVP(domain_EVP, ['W','W_p','Q','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol,ncc_cutoff=ncc_cut,entry_cutoff=entry_cut)
     if (diffusion == False) and (tstop == False): 
-        waves = de.EVP(domain_EVP, ['W','Q','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol)
+        waves = de.EVP(domain_EVP, ['W','Q','Ux','Uy','Uz'], eigenvalue='sigma',tolerance=tol,ncc_cutoff=ncc_cut,entry_cutoff=entry_cut)
 
     '''
     set up required vertical profiles as non-constant coefficients

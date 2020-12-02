@@ -3,7 +3,7 @@ stratified linear analysis of the streaming instability
 """
 
 from stratsi_params import *
-from eigenproblem import Eigenproblem
+from eigentools import Eigenproblem
 
 '''
 output control
@@ -38,16 +38,16 @@ W_p = W_primed (dW/dz)...etc
 '''
 
 if (viscosity_pert == True) and (diffusion == True):#full problem: include viscosity and particle diffusion
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol,ncc_cutoff=ncc_cut,entry_cutoff=entry_cut)
 
 if (viscosity_pert == True) and (diffusion == False):#include viscosity but no particle diffusion
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugx_p','Ugy','Ugy_p','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol,ncc_cutoff=ncc_cut,entry_cutoff=entry_cut)
     
 if (viscosity_pert == False) and (diffusion == True):#ignore gas viscosity but include particle diffusion 
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Q_p','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol,ncc_cutoff=ncc_cut,entry_cutoff=entry_cut)
     
 if (viscosity_pert == False) and (diffusion == False):#ignore gas viscosity and ignore diffusion  
-    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol)
+    waves = de.EVP(domain_EVP, ['W','Ugx','Ugy','Ugz','Q','Udx','Udy','Udz'], eigenvalue='sigma',tolerance=tol,ncc_cutoff=ncc_cut,entry_cutoff=entry_cut)
 
 
 '''
@@ -273,7 +273,7 @@ waves.add_bc('left(dz(Ugy - epsilon0*vgy0*Q/(1+epsilon0) + epsilon0*Udy + epsilo
 waves.add_bc('left(Ugz + epsilon0*Udz)=0')
 
 waves.add_bc('right(dz(W))=0')
-
+#waves.add_bc('right(epsilon0*Q*vdz0/(1+epsilon0) + epsilon0*Udz + Ugz)=0')
 if diffusion == True:
     waves.add_bc('right(Q)=0')
 

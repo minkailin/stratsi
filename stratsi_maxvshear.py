@@ -2,11 +2,11 @@ import numpy as np
 import scipy.optimize 
 
 
-delta = 1e-7
+delta = 1e-6
 stokes= 0.01
 hd    = np.sqrt(delta/(stokes+delta))
 
-metal = 0.01
+metal = 0.03
 dgmid = metal/hd
 
 eta_hat=0.05

@@ -50,7 +50,7 @@ nz_vert = 1024
 mode parameters
 '''
 kx     = 400.0
-kx_min = 100
+kx_min = 400
 kx_max = 1e4
 nkx    = 1
 
@@ -77,6 +77,8 @@ Neig = 10 #number of eigenvalues to get for sparse solver
 eigen_trial = 1.058138e0+2.378654e0*1j #trial eigenvalue. (need to flip sign of imag part from what's printed by code)
 growth_filter = 10.0 #mode filter, only allow growth rates < growth_filter
 tol = 1e-12
+ncc_cut = 1e-10
+entry_cut = 0.0
 
 '''
 analytic vertical profiles for d/g, vdz, rhog assuming constant stokes number 
