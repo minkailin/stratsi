@@ -40,7 +40,7 @@ kx normalized by 1/Hgas
 '''
 
 kx     = 400.0
-kx_min = 400
+kx_min = 1e3
 kx_max = 1e4
 nkx    = 1
 
@@ -60,13 +60,13 @@ if((tstop == False) and (diffusion == True)):
 problem parameters
 '''
 alpha0    = 1e-6
-st0       = 1e-2
+st0       = 1e-3
 dg0       = 2.0
 metal     = 0.03#0.00135
 eta_hat   = 0.05
 
 zmin      = 0
-zmax      = 0.05
+zmax      = 0.158
 nz_waves  = 128
 
 delta0   = alpha0*(1.0 + st0 + 4.0*st0*st0)/(1.0+st0*st0)**2
@@ -573,8 +573,8 @@ if __name__ == '__main__':
 
         growth = eigenfreq[i].real
         freq   = eigenfreq[i].imag
-        g1     =  np.argmax(growth)
-        trial  = np.mean(growth) + 1j*np.mean(freq)#eigenfreq[i][g1]
+        g1     = np.argmax(growth)
+        trial  = eigenfreq[i][g1]
     
     '''
     print results to screen (most unstable mode for each kx)
