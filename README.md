@@ -1,11 +1,11 @@
 # **Stratified and vertically-shearing streaming instabilities**
 
 ## Paper
-* [`Lin (2020)`](https://ui.adsabs.harvard.edu/abs/2020arXiv201112300L/abstract)
+* [`Lin (2021)`](https://ui.adsabs.harvard.edu/abs/2020arXiv201112300L/abstract)
 
 ## Requirements
-* [`DEDALUS`](https://dedalus-project.org/)
-* [`EIGENTOOLS`](https://github.com/DedalusProject/eigentools) (a slighty modified version is included below)
+* [`DEDALUS`](https://dedalus-project.org/) (pip v2.2006, works with github commit c8337f3)
+* [`EIGENTOOLS`](https://github.com/DedalusProject/eigentools) (v1.2012.1)
 
 ## One-fluid model
 
@@ -100,8 +100,8 @@ _Outputs (*.png)_
 ## Utilities
 * `run_problem.sh`  
 For running the complete two-fluid problem (computing equilibrium then solving the linearized equations).
-* `eigenproblem.py`  
-Copied from the [`EIGENTOOLS`](https://github.com/DedalusProject/eigentools) package, tweaked to allow variable tolerance (`tol`,`tol_eigen`)
+* `eigenproblem.py` (OBSOLETE, now using the Python package)\
+Copied from the [`EIGENTOOLS`](https://github.com/DedalusProject/eigentools) package, tweaked to allow variable tolerance  (`tol`,`tol_eigen`)
 * `stratsi_maxvshear.py`  
 For computing the largest vertical shear rate in the disk and its location.
 * `stratsi_plot_eqm.py`  
